@@ -1,5 +1,4 @@
-# kp-dimple
-A project from the 6th semester KP (Kerja Praktek) subject at the Sekolah Tinggi Teknologi Indonesia Tanjung Pinang. Android-based project using React Native CLI to simplify the disposition and delegation of letters in the Office of (PKBI) Perkumpulan Keluarga Berencana Indonesia Kepulauan Riau.
+This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
 
 # Getting Started
 
