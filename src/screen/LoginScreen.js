@@ -1,91 +1,218 @@
-import React from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Image } from 'react-native';
+import React, { useState } from 'react'
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Image, ScrollView, ToastAndroid } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { AuthContext } from './AuthProvider';
+import AsyncStorage, {
+  useAsyncStorage,
+} from '@react-native-async-storage/async-storage';
+import axios from 'axios'
+import { ALERT_TYPE, Dialog, AlertNotificationRoot, Toast } from 'react-native-alert-notification';
 
 const LoginScreen = () => {
-
   const navigation = useNavigation();
+  const { setIsLoggedIn } = React.useContext(AuthContext);
+  const { setItem } = useAsyncStorage('@token');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
-  const handleLogin = () => {
-    navigation.navigate('Dashboard');
+  const validateEmail = (email) => {
+    let reg = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w\w+)+$/;
+    return reg.test(email);
   };
+
+  const handleLogin = async (value) => {
+    if (!validateEmail(value.email)) {
+        Toast.show({
+            type: ALERT_TYPE.WARNING,
+            title: 'Warning',
+            textBody: 'Please enter a valid email address',
+        });
+        return;
+    }
+
+    if (value.password === '') {
+        Toast.show({
+            type: ALERT_TYPE.WARNING,
+            title: 'Warning',
+            textBody: 'Password cannot be empty',
+        });
+        return;
+    }
+
+    try {
+        const response = await axios.post('http://192.168.18.57:3800/user/login', {
+            email: value.email,
+            password: value.password
+        });
+
+        await AsyncStorage.setItem('password', value.password);
+        await AsyncStorage.setItem('email', value.email);
+        await AsyncStorage.setItem('username', response.data.data.username);
+
+        await setItem('DUMMY TOKEN');
+        Dialog.show({
+            type: ALERT_TYPE.SUCCESS,
+            title: 'Success',
+            textBody: response.data.message,
+            button: 'Close',
+            onHide: () => {
+                setIsLoggedIn(true);
+                navigation.navigate('Dashboard');
+            }
+        });
+    } catch (error) {
+        console.log('Error:', error);
+
+        if (error.response) {
+            const status = error.response.status;
+            const message = error.response.data.message;
+
+            switch (status) {
+                case 400:
+                    Dialog.show({
+                        type: ALERT_TYPE.WARNING,
+                        title: 'Warning',
+                        textBody: message || 'Bad request',
+                        button: 'Close'
+                    });
+                    break;
+
+                case 401:
+                    Dialog.show({
+                        type: ALERT_TYPE.DANGER,
+                        title: 'Unauthorized',
+                        textBody: message || 'Unauthorized access',
+                        button: 'Close'
+                    });
+                    break;
+
+                case 404:
+                    Dialog.show({
+                        type: ALERT_TYPE.DANGER,
+                        title: 'Not Found',
+                        textBody: message || 'User not found',
+                        button: 'Close'
+                    });
+                    break;
+
+                case 500:
+                    Dialog.show({
+                        type: ALERT_TYPE.DANGER,
+                        title: 'Error',
+                        textBody: 'Internal server error',
+                        button: 'Close'
+                    });
+                    break;
+
+                default:
+                    Dialog.show({
+                        type: ALERT_TYPE.DANGER,
+                        title: 'Error',
+                        textBody: 'An unexpected error occurred',
+                        button: 'Close'
+                    });
+            }
+        } else if (error.request) {
+            Dialog.show({
+                type: ALERT_TYPE.DANGER,
+                title: 'Error',
+                textBody: 'No response from server',
+                button: 'Close'
+            });
+        } else {
+            Dialog.show({
+                type: ALERT_TYPE.DANGER,
+                title: 'Error',
+                textBody: 'An unexpected error occurred',
+                button: 'Close'
+            });
+        }
+    }
+};
 
   const handleSignup = () => {
     navigation.navigate('Signup');
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.footer}>
-        <Text style={styles.title}>Sign In</Text>
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Email</Text>
-          <TextInput style={styles.input} placeholder="Enter Your Email" />
+    <ScrollView contentContainerStyle={styles.scrollContainer}>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Image source={require('../assets/signin.png')} style={styles.image} />
         </View>
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Password</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter Your Password"
-            secureTextEntry={true}
-          />
-        </View>
-        <TouchableOpacity>
-          <Text style={styles.forgotPassword}>Forgot Password?</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={handleLogin}>
-          <Text style={styles.buttonText}>Login</Text> 
-        </TouchableOpacity>
-        <View style={styles.registerContainer}>
-          <Text style={styles.registerText}>Don't have an account?</Text>
-          <TouchableOpacity onPress={handleSignup}>
-            <Text style={styles.registerLink}> Register</Text>
-          </TouchableOpacity>
+        <View style={styles.footer}>
+          <AlertNotificationRoot/>
+          <Text style={styles.title}>Sign In</Text>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Email</Text>
+            <TextInput 
+              style={styles.input} 
+              placeholder="Enter Your Email" 
+              onChangeText={(text) => setEmail(text)}
+              value={email}
+            />
+          </View>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Password</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter Your Password"
+              secureTextEntry={true}
+              onChangeText={(text) => setPassword(text)}
+              value={password}
+            />
+          </View>
+          
+            <TouchableOpacity style={styles.button} onPress={async () => await handleLogin({ email, password })}>
+              <Text style={styles.buttonText}>Login</Text>
+            </TouchableOpacity>  
+          
+          
+          <View style={styles.registerContainer}>
+            <Text style={styles.registerText}>Don't have an account?</Text>
+            <TouchableOpacity onPress={handleSignup}>
+              <Text style={styles.registerLink}> Register</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
-      <View style={styles.header}>
-        <Image source={require('../assets/signin.png')} style={styles.image} />
-      </View>
-    </View>
+    </ScrollView>
   );
-}
+};
 
 const styles = StyleSheet.create({
+  scrollContainer: {
+    flexGrow: 1,
+  },
   container: {
     flex: 1,
     backgroundColor: 'white',
-    position: 'relative', // Ensure the container is positioned relatively
   },
   header: {
-    position: 'absolute', // Position the header absolutely
-    top: 0, // Adjust top position if needed
-    left: 0, // Adjust left position if needed
-    right: 0, // Adjust right position if needed
-    bottom: 510, // Adjust bottom position if needed
-    zIndex: -1, // Ensure it is behind the footer
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: 0,
   },
   footer: {
     flex: 1,
     backgroundColor: '#002D7A',
-    borderTopLeftRadius: 50,
-    borderTopRightRadius: 50,
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
     paddingVertical: 20,
     paddingHorizontal: 30,
-    marginTop: 280,
+    marginTop: 0,
   },
   image: {
-    width: 350,
-    height: 350,
+    width: 250,
+    height: 250,
     resizeMode: 'contain',
   },
   title: {
     color: '#fff',
-    fontSize: 40,
+    fontSize: 30,
     fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 50,
+    textAlign: 'left',
+    marginBottom: 30,
   },
   inputContainer: {
     marginBottom: 20,
@@ -99,29 +226,23 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: '#fff',
-    borderRadius: 50,
+    borderRadius: 10,
     padding: 15,
     fontSize: 16,
-  },
-  forgotPassword: {
-    color: '#fff',
-    textAlign: 'right',
-    marginBottom: 40,
-    fontWeight: 'bold',
-    marginRight: 5,
   },
   button: {
     backgroundColor: '#fff',
     borderRadius: 50,
-    paddingVertical: 12,
+    paddingVertical: 10,
     width: '50%',
     alignItems: 'center',
     alignSelf: 'center',
     marginBottom: 15,
+    marginTop: 40,
   },
   buttonText: {
     color: 'black',
-    fontSize: 22,
+    fontSize: 15,
     fontWeight: 'bold',
   },
   registerContainer: {

@@ -1,26 +1,36 @@
 import React, { useEffect } from 'react';
 import { Text, StyleSheet, View, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useAsyncStorage } from '@react-native-async-storage/async-storage';
 
 const SplashScreen = () => {
   const navigation = useNavigation();
+  const { getItem: getOnboardingStatus } = useAsyncStorage('@onboarded');
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      navigation.navigate('Onboarding');
-    }, 4000);
+    const checkOnboardingStatus = async () => {
+      const onboarded = await getOnboardingStatus();
+      
+      if (onboarded !== null) {
+        navigation.navigate('Login');
+      } else {
+        navigation.navigate('Onboarding');
+      }
+    };
+
+    const timer = setTimeout(checkOnboardingStatus, 4000);
 
     return () => clearTimeout(timer);
-  }, [navigation]);
+  }, [navigation, getOnboardingStatus]);
 
   return (
     <View style={styles.splashScreen}>
       <View style={styles.content}>
         <Image source={require('../assets/Logo_Dimple.png')} style={styles.logo} />
-        <Text style={styles.Text}>Create By</Text>
-        <View style={styles.footer}>
-          <Image source={require('../assets/logopkbi_KEPRI.png')} style={styles.footerLogo} />
-        </View>
+      </View>
+      <View style={styles.footer}>
+        <Text style={styles.text}>created by</Text>
+        <Image source={require('../assets/logopkbi_KEPRI.png')} style={styles.footerLogo} />
       </View>
     </View>
   );
@@ -31,32 +41,32 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'white',
+    padding: 20,
   },
   content: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   logo: {
-    width: 280,
-    height: 140,
-    marginTop: 270,
+    width: 200,
+    height: 200,
+    resizeMode: 'contain',
   },
   footer: {
-    flexDirection: 'row',
     alignItems: 'center',
+    position: 'absolute',
+    bottom: 20,
   },
-  Text: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: 'grey',
-    textAlign: 'center',
-    marginTop: 220,
-    marginLeft: 20,
+  text: {
+    fontSize: 10,
+    color: '#333',
+    marginBottom: -35,
   },
   footerLogo: {
-    width: 270,
-    height: 60,
-    marginTop: 20,
+    width: 150,
+    height: 150,
+    resizeMode: 'contain',
   },
 });
 

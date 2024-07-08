@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity, Image } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { useNavigation } from '@react-navigation/native';
-import CustomCheckbox from './CustomCheckbox';
+import { AuthContext } from './AuthProvider';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const messages = [
   {
@@ -23,6 +24,14 @@ const messages = [
   },
   {
     id: '3',
+    name: 'Pak Dirut',
+    date: '19 Dec',
+    subject: 'Requesting event for 28 Dec 2024',
+    content: 'I am requesting blablablablablablablablablablablablablablablablablablablabla',
+    avatar: require('../assets/profilepicture.png')
+  },
+  {
+    id: '4',
     name: 'Pak Dirut',
     date: '19 Dec',
     subject: 'Requesting event for 28 Dec 2024',
@@ -75,32 +84,35 @@ const employees = [
       role: 'Sales Manager',
       status: 'Active',
     }
+  },
+  {
+    value: 'william',
+    user: {
+      name: 'William Howard',
+      avatar: 'https://i.pravatar.cc/300?u=a048581f4e29026701d',
+      username: 'william',
+      url: '#',
+      role: 'Sales Manager',
+      status: 'Active',
+    }
   }
 ];
 
 const DashboardScreen = () => {
   const navigation = useNavigation();
   const [selectedTab, setSelectedTab] = useState('All');
-  const [isEditing, setIsEditing] = useState(false);
-  const [groupSelected, setGroupSelected] = useState([]);
 
-  const handleEditPress = () => {
-    setIsEditing(!isEditing);
-  };
-
-  const handleCheckboxPress = (value) => {
-    if (groupSelected.includes(value)) {
-      setGroupSelected(groupSelected.filter(item => item !== value));
-    } else {
-      setGroupSelected([...groupSelected, value]);
-    }
+  const handleProfile = () => {
+    navigation.navigate('Profile');
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerText}>All inbox</Text>
-        <Image source={require('../assets/profilepicture.png')} style={styles.profileImage} />
+        <TouchableOpacity activeOpacity={0.8} onPress={handleProfile}>
+          <Image source={require('../assets/profilepicture.png')} style={styles.profileImage} />
+        </TouchableOpacity>
       </View>
 
       <View style={styles.searchContainer}>
@@ -108,74 +120,47 @@ const DashboardScreen = () => {
         <TextInput placeholder="Search" placeholderTextColor="white" style={styles.searchInput} />
       </View>
 
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.button} onPress={handleEditPress}>
-          <Text style={styles.buttonText}>Edit</Text>
-        </TouchableOpacity>
-      </View>
-
-      {isEditing && (
-        <View style={styles.editContainer}>
-          <Text style={styles.editTitle}>Select employees</Text>
-          {employees.map(employee => (
-            <CustomCheckbox
-              key={employee.value}
-              user={employee.user}
-              isChecked={groupSelected.includes(employee.value)}
-              onPress={() => handleCheckboxPress(employee.value)}
-            />
-          ))}
-          <Text style={styles.selectedText}>
-            Selected: {groupSelected.join(", ")}
-          </Text>
-        </View>
-      )}
-
-      {!isEditing && (
-        <>
-          <View style={styles.tabContainer}>
-            <TouchableOpacity
-              style={[styles.tabButton, selectedTab === 'All' && styles.tabButtonActive]}
-              onPress={() => setSelectedTab('All')}
-            >
-              <Text style={[styles.tabButtonText, selectedTab === 'All' && styles.tabButtonTextActive]}>All</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.tabButton, selectedTab === 'Process' && styles.tabButtonActive]}
-              onPress={() => setSelectedTab('Process')}
-            >
-              <Text style={[styles.tabButtonText, selectedTab === 'Process' && styles.tabButtonTextActive]}>Process</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.tabButton, selectedTab === 'Complete' && styles.tabButtonActive]}
-              onPress={() => setSelectedTab('Complete')}
-            >
-              <Text style={[styles.tabButtonText, selectedTab === 'Complete' && styles.tabButtonTextActive]}>Complete</Text>
-            </TouchableOpacity>
-          </View>
-
-          <FlatList
-            data={messages}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <View style={styles.messageContainer}>
-                <Image source={item.avatar} style={styles.avatar} />
-                <View style={styles.messageContent}>
-                  <Text style={styles.messageTitle}>{item.name}</Text>
-                  <Text style={styles.messageSubject}>{item.subject}</Text>
-                  <Text style={styles.messageText}>{item.content}</Text>
-                </View>
-                <Text style={styles.messageDate}>{item.date}</Text>
-              </View>
-            )}
-          />
-
-          <TouchableOpacity style={styles.createButton}>
-            <Icon name="pencil" size={20} color="#fff" />
-            <Text style={styles.createButtonText}>Create</Text>
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[styles.tabButton, selectedTab === 'All' && styles.tabButtonActive]}
+            onPress={() => setSelectedTab('All')}
+          >
+            <Text style={[styles.tabButtonText, selectedTab === 'All' && styles.tabButtonTextActive]}>All</Text>
           </TouchableOpacity>
-        </>
-      )}
+          <TouchableOpacity
+            style={[styles.tabButton, selectedTab === 'Process' && styles.tabButtonActive]}
+            onPress={() => setSelectedTab('Process')}
+          >
+            <Text style={[styles.tabButtonText, selectedTab === 'Process' && styles.tabButtonTextActive]}>Process</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tabButton, selectedTab === 'Complete' && styles.tabButtonActive]}
+            onPress={() => setSelectedTab('Complete')}
+          >
+            <Text style={[styles.tabButtonText, selectedTab === 'Complete' && styles.tabButtonTextActive]}>Complete</Text>
+          </TouchableOpacity>
+        </View>
+
+        <FlatList
+          data={messages}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <View style={styles.messageContainer}>
+              <Image source={item.avatar} style={styles.avatar} />
+              <View style={styles.messageContent}>
+                <Text style={styles.messageTitle}>{item.name}</Text>
+                <Text style={styles.messageSubject}>{item.subject}</Text>
+                <Text style={styles.messageText}>{item.content}</Text>
+              </View>
+              <Text style={styles.messageDate}>{item.date}</Text>
+            </View>
+          )}
+        />
+
+        <TouchableOpacity style={styles.createButton}>
+          <Icon name="pencil" size={20} color="#fff" />
+          <Text style={styles.createButtonText}>Create</Text>
+        </TouchableOpacity>
     </View>
   );
 }

@@ -2,14 +2,18 @@ import React from 'react';
 import { Text, StyleSheet, View, Image, Dimensions, TouchableOpacity } from 'react-native';
 import Page1Image from '../assets/onboard.png';  // Correct path
 import { useNavigation } from '@react-navigation/native';
+import { AuthContext } from './AuthProvider';
+import { useAsyncStorage } from '@react-native-async-storage/async-storage';
 
 const { width, height } = Dimensions.get('window');
 
 const Onboarding = () => {
   const navigation = useNavigation();
+  const { setItem: setOnboarded } = useAsyncStorage('@onboarded');
 
-  const handleOnFinish = () => {
-    navigation.navigate('Login');
+  const handleOnFinish = async () => {
+    await setOnboarded('true'); // Mark onboarding as complete
+    navigation.navigate('Login'); // Navigate to the dashboard screen
   };
 
   return (
