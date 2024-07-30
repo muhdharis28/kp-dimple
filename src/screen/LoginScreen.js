@@ -1,12 +1,13 @@
-import React, { useState } from 'react'
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Image, ScrollView, ToastAndroid } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, Image, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { AuthContext } from './AuthProvider';
-import AsyncStorage, {
-  useAsyncStorage,
-} from '@react-native-async-storage/async-storage';
-import axios from 'axios'
-import { ALERT_TYPE, Dialog, AlertNotificationRoot, Toast } from 'react-native-alert-notification';
+import AsyncStorage, { useAsyncStorage } from '@react-native-async-storage/async-storage';
+import axios from 'axios';
+import { ALERT_TYPE, Dialog, AlertNotificationRoot } from 'react-native-alert-notification';
+import config from './config'; // Import the configuration
+import tw from 'twrnc';
+import Icon from 'react-native-vector-icons/FontAwesome';
 
 const LoginScreen = () => {
   const navigation = useNavigation();
@@ -14,6 +15,9 @@ const LoginScreen = () => {
   const { setItem } = useAsyncStorage('@token');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
   const validateEmail = (email) => {
     let reg = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w\w+)+$/;
@@ -21,242 +25,172 @@ const LoginScreen = () => {
   };
 
   const handleLogin = async (value) => {
+    let valid = true;
+
     if (!validateEmail(value.email)) {
-        Toast.show({
-            type: ALERT_TYPE.WARNING,
-            title: 'Warning',
-            textBody: 'Please enter a valid email address',
-        });
-        return;
+      setEmailError('Please enter a valid email address');
+      valid = false;
+    } else {
+      setEmailError('');
     }
 
     if (value.password === '') {
-        Toast.show({
-            type: ALERT_TYPE.WARNING,
-            title: 'Warning',
-            textBody: 'Password cannot be empty',
-        });
-        return;
+      setPasswordError('Password cannot be empty');
+      valid = false;
+    } else {
+      setPasswordError('');
     }
+
+    if (!valid) return;
 
     try {
-        const response = await axios.post('http://192.168.18.57:3800/user/login', {
-            email: value.email,
-            password: value.password
-        });
+      const response = await axios.post(`${config.apiBaseUrl}/user/login`, {
+        email: value.email,
+        password: value.password
+      });
 
-        await AsyncStorage.setItem('password', value.password);
-        await AsyncStorage.setItem('email', value.email);
-        await AsyncStorage.setItem('username', response.data.data.username);
+      await AsyncStorage.setItem('password', value.password);
+      await AsyncStorage.setItem('email', value.email);
+      await AsyncStorage.setItem('username', response.data.data.username);
+      await AsyncStorage.setItem('role', response.data.data.role);  // Save the role
+      await AsyncStorage.setItem('userId', JSON.stringify(response.data.data.id));  // Save the role
 
-        await setItem('DUMMY TOKEN');
-        Dialog.show({
-            type: ALERT_TYPE.SUCCESS,
-            title: 'Success',
-            textBody: response.data.message,
-            button: 'Close',
-            onHide: () => {
-                setIsLoggedIn(true);
-                navigation.navigate('Dashboard');
-            }
-        });
+      await setItem('DUMMY TOKEN');
+      setIsLoggedIn(true);
+      navigation.replace('Dashboard');
     } catch (error) {
-        console.log('Error:', error);
+      console.log('Error:', error);
 
-        if (error.response) {
-            const status = error.response.status;
-            const message = error.response.data.message;
+      if (error.response) {
+        const status = error.response.status;
+        const message = error.response.data.message;
 
-            switch (status) {
-                case 400:
-                    Dialog.show({
-                        type: ALERT_TYPE.WARNING,
-                        title: 'Warning',
-                        textBody: message || 'Bad request',
-                        button: 'Close'
-                    });
-                    break;
-
-                case 401:
-                    Dialog.show({
-                        type: ALERT_TYPE.DANGER,
-                        title: 'Unauthorized',
-                        textBody: message || 'Unauthorized access',
-                        button: 'Close'
-                    });
-                    break;
-
-                case 404:
-                    Dialog.show({
-                        type: ALERT_TYPE.DANGER,
-                        title: 'Not Found',
-                        textBody: message || 'User not found',
-                        button: 'Close'
-                    });
-                    break;
-
-                case 500:
-                    Dialog.show({
-                        type: ALERT_TYPE.DANGER,
-                        title: 'Error',
-                        textBody: 'Internal server error',
-                        button: 'Close'
-                    });
-                    break;
-
-                default:
-                    Dialog.show({
-                        type: ALERT_TYPE.DANGER,
-                        title: 'Error',
-                        textBody: 'An unexpected error occurred',
-                        button: 'Close'
-                    });
-            }
-        } else if (error.request) {
+        switch (status) {
+          case 400:
             Dialog.show({
-                type: ALERT_TYPE.DANGER,
-                title: 'Error',
-                textBody: 'No response from server',
-                button: 'Close'
+              type: ALERT_TYPE.WARNING,
+              title: 'Warning',
+              textBody: message || 'Bad request',
+              button: 'Close'
             });
-        } else {
+            break;
+
+          case 401:
             Dialog.show({
-                type: ALERT_TYPE.DANGER,
-                title: 'Error',
-                textBody: 'An unexpected error occurred',
-                button: 'Close'
+              type: ALERT_TYPE.DANGER,
+              title: 'Unauthorized',
+              textBody: message || 'Unauthorized access',
+              button: 'Close'
+            });
+            break;
+
+          case 404:
+            Dialog.show({
+              type: ALERT_TYPE.DANGER,
+              title: 'Not Found',
+              textBody: message || 'User not found',
+              button: 'Close'
+            });
+            break;
+
+          case 500:
+            Dialog.show({
+              type: ALERT_TYPE.DANGER,
+              title: 'Error',
+              textBody: 'Internal server error',
+              button: 'Close'
+            });
+            break;
+
+          default:
+            Dialog.show({
+              type: ALERT_TYPE.DANGER,
+              title: 'Error',
+              textBody: 'An unexpected error occurred',
+              button: 'Close'
             });
         }
+      } else if (error.request) {
+        console.log(error.request);
+        Dialog.show({
+          type: ALERT_TYPE.DANGER,
+          title: 'Error',
+          textBody: 'No response from server',
+          button: 'Close'
+        });
+      } else {
+        Dialog.show({
+          type: ALERT_TYPE.DANGER,
+          title: 'Error',
+          textBody: 'An unexpected error occurred',
+          button: 'Close'
+        });
+      }
     }
-};
+  };
 
   const handleSignup = () => {
     navigation.navigate('Signup');
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.scrollContainer}>
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Image source={require('../assets/signin.png')} style={styles.image} />
+    <View style={tw`flex-1`}>
+      <ScrollView contentContainerStyle={tw`flex-grow`}>
+        <View style={tw`flex-1 bg-white`}>
+          <View style={tw`justify-center items-center mt-0`}>
+            <AlertNotificationRoot style={tw`absolute top-0 left-0 right-0`} />
+            <Image source={require('../assets/signin.png')} style={tw`w-64 h-64`} resizeMode="contain" />
+          </View>
+          <View style={tw`flex-1 bg-[#002D7A] rounded-t-3xl p-5 mt-0`}>
+            <Text style={tw`text-white text-3xl font-bold mb-5 mt-3 ml-3`}>Masuk</Text>
+            <View style={tw`mb-5`}>
+              <Text style={tw`ml-3 text-white text-base mt-3 mb-2`}>Email</Text>
+              <View style={tw`flex-row items-center bg-white rounded-full px-3 mx-3`}>
+                <TextInput 
+                  style={tw`flex-1 text-base p-3`}
+                  placeholder='Masukan email'
+                  onChangeText={(text) => setEmail(text)}
+                  value={email}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </View> 
+              {emailError ? <Text style={tw`ml-3 text-red-500`}>{emailError}</Text> : null}
+            </View>
+            <View style={tw`mb-5`}>
+              <Text style={tw`ml-3 text-white text-base mb-2`}>Kata Sandi</Text>
+              <View style={tw`flex-row items-center bg-white rounded-full px-3 mx-3`}>
+                <TextInput
+                  style={tw`flex-1 text-base p-3`}
+                  placeholder='Masukan kata sandi'
+                  secureTextEntry={!isPasswordVisible}
+                  onChangeText={(text) => setPassword(text)}
+                  value={password}
+                />
+                <TouchableOpacity onPress={() => setIsPasswordVisible(!isPasswordVisible)}>
+                  <Icon name={isPasswordVisible ? 'eye-slash' : 'eye'} size={24} color='grey' />
+                </TouchableOpacity>
+              </View>
+              {passwordError ? <Text style={tw`ml-3 text-red-500`}>{passwordError}</Text> : null}
+            </View>
+            
+            <View style={tw`items-center justify-center`}>
+              <TouchableOpacity style={tw`bg-white rounded-full py-3 px-20 mt-5`} onPress={async () => await handleLogin({ email, password })}>
+                <Text style={tw`text-black text-lg font-bold`}>Masuk</Text>
+              </TouchableOpacity>   
+            </View> 
+            
+            <View style={tw`flex-row justify-center mt-5`}>
+              <Text style={tw`text-white text-base`}>Tidak punya akun?</Text>
+              <TouchableOpacity onPress={handleSignup}>
+                <Text style={tw`text-[#2298F2] text-base ml-1`}> Daftar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
-        <View style={styles.footer}>
-          <AlertNotificationRoot/>
-          <Text style={styles.title}>Sign In</Text>
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput 
-              style={styles.input} 
-              placeholder="Enter Your Email" 
-              onChangeText={(text) => setEmail(text)}
-              value={email}
-            />
-          </View>
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Password</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter Your Password"
-              secureTextEntry={true}
-              onChangeText={(text) => setPassword(text)}
-              value={password}
-            />
-          </View>
-          
-            <TouchableOpacity style={styles.button} onPress={async () => await handleLogin({ email, password })}>
-              <Text style={styles.buttonText}>Login</Text>
-            </TouchableOpacity>  
-          
-          
-          <View style={styles.registerContainer}>
-            <Text style={styles.registerText}>Don't have an account?</Text>
-            <TouchableOpacity onPress={handleSignup}>
-              <Text style={styles.registerLink}> Register</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 };
-
-const styles = StyleSheet.create({
-  scrollContainer: {
-    flexGrow: 1,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: 'white',
-  },
-  header: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 0,
-  },
-  footer: {
-    flex: 1,
-    backgroundColor: '#002D7A',
-    borderTopLeftRadius: 25,
-    borderTopRightRadius: 25,
-    paddingVertical: 20,
-    paddingHorizontal: 30,
-    marginTop: 0,
-  },
-  image: {
-    width: 250,
-    height: 250,
-    resizeMode: 'contain',
-  },
-  title: {
-    color: '#fff',
-    fontSize: 30,
-    fontWeight: 'bold',
-    textAlign: 'left',
-    marginBottom: 30,
-  },
-  inputContainer: {
-    marginBottom: 20,
-  },
-  label: {
-    color: '#fff',
-    fontSize: 18,
-    marginBottom: 5,
-    marginLeft: 15,
-    fontWeight: 'bold',
-  },
-  input: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 15,
-    fontSize: 16,
-  },
-  button: {
-    backgroundColor: '#fff',
-    borderRadius: 50,
-    paddingVertical: 10,
-    width: '50%',
-    alignItems: 'center',
-    alignSelf: 'center',
-    marginBottom: 15,
-    marginTop: 40,
-  },
-  buttonText: {
-    color: 'black',
-    fontSize: 15,
-    fontWeight: 'bold',
-  },
-  registerContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  registerText: {
-    color: '#fff',
-    fontSize: 16,
-  },
-  registerLink: {
-    color: '#2298F2',
-    fontSize: 16,
-  },
-});
 
 export default LoginScreen;

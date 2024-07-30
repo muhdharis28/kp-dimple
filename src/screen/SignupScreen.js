@@ -1,9 +1,12 @@
-import React, { useState } from 'react'
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Image, ScrollView, ToastAndroid } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, Image, ScrollView } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { useNavigation } from '@react-navigation/native';
 import axios from 'axios';
-import { ALERT_TYPE, Dialog, AlertNotificationRoot, Toast } from 'react-native-alert-notification';
+import { ALERT_TYPE, Dialog, AlertNotificationRoot } from 'react-native-alert-notification';
+import { Picker } from '@react-native-picker/picker';
+import config from './config'; // Import the configuration
+import tw from 'twrnc';
 
 const SignupScreen = () => {
   const navigation = useNavigation();
@@ -11,6 +14,28 @@ const SignupScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [division, setDivision] = useState('');
+  const [divisions, setDivisions] = useState([]);
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [usernameError, setUsernameError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
+  const [divisionError, setDivisionError] = useState('');
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
+
+  useEffect(() => {
+    const fetchDivisions = async () => {
+      try {
+        const response = await axios.get(`${config.apiBaseUrl}/division`);
+        setDivisions(response.data.data);
+      } catch (error) {
+        console.error('Error fetching divisions:', error);
+      }
+    };
+
+    fetchDivisions();
+  }, []);
 
   const validateEmail = (email) => {
     let reg = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w\w+)+$/;
@@ -18,47 +43,51 @@ const SignupScreen = () => {
   };
 
   const handleOnFinish = async (value) => {
+    let valid = true;
+
     if (value.username === '') {
-      Toast.show({
-        type: ALERT_TYPE.WARNING,
-        title: 'Warning',
-        textBody: 'Username cannot be empty',
-      })
-      return;
+      setUsernameError('Username cannot be empty');
+      valid = false;
+    } else {
+      setUsernameError('');
     }
 
     if (!validateEmail(value.email)) {
-      Toast.show({
-        type: ALERT_TYPE.WARNING,
-        title: 'Warning',
-        textBody: 'Please enter a valid email address',
-      })
-      return;
+      setEmailError('Please enter a valid email address');
+      valid = false;
+    } else {
+      setEmailError('');
     }
 
     if (value.password === '') {
-      Toast.show({
-        type: ALERT_TYPE.WARNING,
-        title: 'Warning',
-        textBody: 'Password cannot be empty',
-      })
-      return;
+      setPasswordError('Password cannot be empty');
+      valid = false;
+    } else {
+      setPasswordError('');
     }
 
     if (value.password !== value.confirmPassword) {
-      Toast.show({
-        type: ALERT_TYPE.WARNING,
-        title: 'Warning',
-        textBody: 'Passwords do not match',
-      })
-      return;
+      setConfirmPasswordError('Passwords do not match');
+      valid = false;
+    } else {
+      setConfirmPasswordError('');
     }
 
+    if (value.division === '') {
+      setDivisionError('Please select a division');
+      valid = false;
+    } else {
+      setDivisionError('');
+    }
+
+    if (!valid) return;
+
     try {
-      const response = await axios.post('http://192.168.18.57:3800/user/register', {
+      const response = await axios.post(`${config.apiBaseUrl}/user/register`, {
         username: value.username,
         email: value.email,
-        password: value.password
+        password: value.password,
+        divisionName: value.division
       });
 
       Dialog.show({
@@ -67,14 +96,14 @@ const SignupScreen = () => {
         textBody: response.data.metadata,
         button: 'Close',
         onHide: () => {
-          navigation.navigate('Login');
+          navigation.replace('Login');
         }
       });
 
     } catch (error) {
       if (error.response) {
         const status = error.response.status;
-  
+
         switch (status) {
           case 400:
             Dialog.show({
@@ -84,7 +113,7 @@ const SignupScreen = () => {
               button: 'Close'
             });
             break;
-  
+
           case 500:
             Dialog.show({
               type: ALERT_TYPE.DANGER,
@@ -93,7 +122,7 @@ const SignupScreen = () => {
               button: 'Close'
             });
             break;
-  
+
           default:
             Dialog.show({
               type: ALERT_TYPE.DANGER,
@@ -117,163 +146,117 @@ const SignupScreen = () => {
           button: 'Close'
         });
       }
-
     }
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.scrollContainer}>
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Icon 
-            style={styles.icon} 
-            name="chevron-circle-left" 
-            size={55} 
-            color="#002D7A" 
-            onPress={() => navigation.goBack()} 
-          />
-          <Image source={require('../assets/Signup.png')} style={styles.image} />
+    <View style={tw`flex-1`}>
+      <ScrollView contentContainerStyle={tw`flex-grow`}>
+        <View style={tw`flex-1 bg-white`}>
+          <View style={tw`justify-center items-center mt-0`}>
+            <Icon 
+              style={tw`absolute top-4 left-4 z-10`} 
+              name="chevron-circle-left" 
+              size={55} 
+              color="#002D7A" 
+              onPress={() => navigation.goBack()} 
+            />
+            <Image source={require('../assets/Signup.png')} style={tw`w-64 h-64`} resizeMode="contain" />
+          </View>
+          <View style={tw`flex-1 bg-[#002D7A] rounded-t-3xl p-5 mt-0`}>
+            <AlertNotificationRoot style={tw`absolute top-0 left-0 right-0`} />
+            <Text style={tw`text-white text-3xl font-bold mb-5 mt-3 ml-3`}>Daftar</Text>
+            <View style={tw`mb-5`}>
+              <Text style={tw`ml-3 text-white text-base mt-3 mb-2`}>Username</Text>
+              <View style={tw`flex-row items-center bg-white rounded-full px-3 mx-3`}>
+                <TextInput 
+                  style={tw`flex-1 text-base p-3`}
+                  placeholder="Masukkan username"
+                  onChangeText={(text) => setUsername(text)}
+                  value={username}
+                />
+              </View>
+              {usernameError ? <Text style={tw`ml-3 text-red-500`}>{usernameError}</Text> : null}
+            </View>
+            <View style={tw`mb-5`}>
+              <Text style={tw`ml-3 text-white text-base mt-3 mb-2`}>Email</Text>
+              <View style={tw`flex-row items-center bg-white rounded-full px-3 mx-3`}>
+                <TextInput 
+                  style={tw`flex-1 text-base p-3`}
+                  placeholder="Masukkan email"
+                  onChangeText={(text) => setEmail(text)}
+                  value={email}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </View>
+              {emailError ? <Text style={tw`ml-3 text-red-500`}>{emailError}</Text> : null}
+            </View>
+            <View style={tw`mb-5`}>
+              <Text style={tw`ml-3 text-white text-base mt-3 mb-2`}>Kata Sandi</Text>
+              <View style={tw`flex-row items-center bg-white rounded-full px-3 mx-3`}>
+                <TextInput
+                  style={tw`flex-1 text-base p-3`}
+                  secureTextEntry={!isPasswordVisible}
+                  placeholder="Masukkan kata sandi"
+                  onChangeText={(text) => setPassword(text)}
+                  value={password}
+                />
+                <TouchableOpacity onPress={() => setIsPasswordVisible(!isPasswordVisible)}>
+                  <Icon name={isPasswordVisible ? 'eye-slash' : 'eye'} size={24} color="grey" />
+                </TouchableOpacity>
+              </View>
+              {passwordError ? <Text style={tw`ml-3 text-red-500`}>{passwordError}</Text> : null}
+            </View>
+            <View style={tw`mb-5`}>
+              <Text style={tw`ml-3 text-white text-base mt-3 mb-2`}>Konfirmasi Kata Sandi</Text>
+              <View style={tw`flex-row items-center bg-white rounded-full px-3 mx-3`}>
+                <TextInput
+                  style={tw`flex-1 text-base p-3`}
+                  secureTextEntry={!isConfirmPasswordVisible}
+                  placeholder="Konfirmasi kata sandi"
+                  onChangeText={(text) => setConfirmPassword(text)}
+                  value={confirmPassword}
+                />
+                <TouchableOpacity onPress={() => setIsConfirmPasswordVisible(!isConfirmPasswordVisible)}>
+                  <Icon name={isConfirmPasswordVisible ? 'eye-slash' : 'eye'} size={24} color="grey" />
+                </TouchableOpacity>
+              </View>
+              {confirmPasswordError ? <Text style={tw`ml-3 text-red-500`}>{confirmPasswordError}</Text> : null}
+            </View>
+            <View style={tw`mb-5`}>
+              <Text style={tw`ml-3 text-white text-base mt-3 mb-2`}>Divisi</Text>
+              <View style={tw`flex-row items-center bg-white rounded-full px-3 mx-3`}>
+                <Picker
+                  selectedValue={division}
+                  onValueChange={(itemValue) => setDivision(itemValue)}
+                  style={tw`flex-1 text-base p-3`}
+                >
+                  <Picker.Item label="Pilih divisi" value="" />
+                  {divisions.map((div) => (
+                    <Picker.Item key={div.id} label={div.name} value={div.name} />
+                  ))}
+                </Picker>
+              </View>
+              {divisionError ? <Text style={tw`ml-3 text-red-500`}>{divisionError}</Text> : null}
+            </View>
+            <View style={tw`items-center justify-center`}>
+              <TouchableOpacity style={tw`bg-white rounded-full py-3 px-20 mt-5`} onPress={async () => await handleOnFinish({ username, email, password, confirmPassword, division })}>
+                <Text style={tw`text-black text-lg font-bold`}>Daftar</Text>
+              </TouchableOpacity>   
+            </View> 
+            
+            <View style={tw`flex-row justify-center mt-5`}>
+              <Text style={tw`text-white text-base`}>Sudah punya akun?</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+                <Text style={tw`text-[#2298F2] text-base ml-1`}> Masuk</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
-        <View style={styles.footer}>
-        <AlertNotificationRoot/>
-          <Text style={styles.title}>Sign Up</Text>
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Username</Text>
-            <TextInput 
-              style={styles.input} 
-              placeholder="Enter Your Name" 
-              onChangeText={(text) => setUsername(text)}
-              value={username}
-            />
-          </View>
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput 
-              style={styles.input} 
-              placeholder="Enter Your Email"
-              onChangeText={(text) => setEmail(text)}
-              value={email}
-            />
-          </View>
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Password</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter Your Password"
-              secureTextEntry={true}
-              onChangeText={(text) => setPassword(text)}
-              value={password}
-            />
-          </View>
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Confirm Password</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Confirm Your Password"
-              secureTextEntry={true}
-              onChangeText={(text) => setConfirmPassword(text)}
-              value={confirmPassword}
-            />
-          </View>
-          
-          <TouchableOpacity style={styles.button} onPress={async () => await handleOnFinish({ username, email, password, confirmPassword })}>
-            <Text style={styles.buttonText}>Sign Up</Text>
-          </TouchableOpacity>    
-          
-          <View style={styles.registerContainer}>
-            <Text style={styles.registerText}>Already have an account?</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-              <Text style={styles.registerLink}> Sign In</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 };
-
-const styles = StyleSheet.create({
-  scrollContainer: {
-    flexGrow: 1,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: 'white',
-  },
-  header: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  icon: {
-    position: 'absolute',
-    top: 40,
-    left: 20,
-    zIndex: 1,
-  },
-  footer: {
-    flex: 1,
-    backgroundColor: '#002D7A',
-    borderTopLeftRadius: 50,
-    borderTopRightRadius: 50,
-    paddingVertical: 20,
-    paddingHorizontal: 30,
-    marginTop: 30,
-  },
-  image: {
-    width: 200, // Set the width to medium size
-    height: 200, // Set the height to medium size
-    resizeMode: 'contain',
-  },
-  title: {
-    color: '#fff',
-    fontSize: 30,
-    fontWeight: 'bold',
-    textAlign: 'left',
-    marginBottom: 30,
-  },
-  inputContainer: {
-    marginBottom: 20,
-  },
-  label: {
-    color: '#fff',
-    fontSize: 18,
-    marginBottom: 5,
-    marginLeft: 15,
-    fontWeight: 'bold',
-  },
-  input: {
-    backgroundColor: '#fff',
-    borderRadius: 50,
-    padding: 15,
-    fontSize: 16,
-  },
-  button: {
-    backgroundColor: '#fff',
-    borderRadius: 50,
-    paddingVertical: 12,
-    width: '50%',
-    alignItems: 'center',
-    alignSelf: 'center',
-    marginBottom: 15,
-  },
-  buttonText: {
-    color: 'black',
-    fontSize: 22,
-    fontWeight: 'bold',
-  },
-  registerContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  registerText: {
-    color: '#fff',
-    fontSize: 16,
-  },
-  registerLink: {
-    color: '#2298F2',
-    fontSize: 16,
-  },
-});
 
 export default SignupScreen;

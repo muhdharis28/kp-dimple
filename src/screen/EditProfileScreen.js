@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Image, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary } from 'react-native-image-picker';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import config from './config'; // Import the configuration
+import tw from 'twrnc';
+
+const defaultProfileImage = require('../assets/default-profile.png'); // Adjust the path as needed
 
 const EditProfileScreen = () => {
   const navigation = useNavigation();
@@ -18,6 +22,7 @@ const EditProfileScreen = () => {
   const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
   const [profileDescription, setProfileDescription] = useState('');
   const [profileImage, setProfileImage] = useState(null);
+  const [division, setDivision] = useState('');
 
   useEffect(() => {
     fetchUserProfile();
@@ -27,15 +32,16 @@ const EditProfileScreen = () => {
     try {
       const asyncEmail = await AsyncStorage.getItem('email');
       const asyncPassword = await AsyncStorage.getItem('password');
-      const response = await axios.get('http://192.168.18.57:3800/user/profile', {
+      const response = await axios.get(`${config.apiBaseUrl}/user/profile`, {
         params: { email: asyncEmail }
       });
-      const { username, email, description, profileImageUrl } = response.data.data;
+      const { username, email, description, profileImageUrl, division } = response.data.data;
       setUsername(username);
       setEmail(email);
       setPassword(asyncPassword);
       setProfileDescription(description);
-      setProfileImage({ uri: `http://192.168.18.57:3800${profileImageUrl}` });
+      setDivision(division);
+      setProfileImage(profileImageUrl ? { uri: `${config.apiBaseUrl}${profileImageUrl}` } : null);
     } catch (error) {
       console.error('Error fetching profile:', error);
     }
@@ -46,25 +52,23 @@ const EditProfileScreen = () => {
       alert('New password and confirm password do not match');
       return;
     }
-
     try {
-      await axios.put('http://192.168.18.57:3800/user/profile', {
+      await axios.put(`${config.apiBaseUrl}/user/profile`, {
         username,
         email,
         description: profileDescription,
       });
-
       if (newPassword) {
         const asyncEmail = await AsyncStorage.getItem('email');
-        await axios.put('http://192.168.18.57:3800/user/password', {
+        await axios.put(`${config.apiBaseUrl}/user/password`, {
           email: asyncEmail,
           newPassword,
           confirmPassword,
         });
+        await AsyncStorage.setItem('password', newPassword);
       }
-      await AsyncStorage.setItem('password', newPassword);
-      alert('Profile updated successfully');
 
+      alert('Profile updated successfully');
       navigation.goBack();
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -85,237 +89,151 @@ const EditProfileScreen = () => {
 
   const pickImage = () => {
     const options = {
-        mediaType: 'photo',
-        includeBase64: false,
+      mediaType: 'photo',
+      includeBase64: false,
     };
 
     launchImageLibrary(options, async (response) => {
-        if (response.didCancel) {
-            console.log('User cancelled image picker');
-        } else if (response.error) {
-            console.log('ImagePicker Error: ', response.error);
-        } else {
-            const source = { uri: response.assets[0].uri };
-            setProfileImage(source);
+      if (response.didCancel) {
+        console.log('User cancelled image picker');
+      } else if (response.error) {
+        console.log('ImagePicker Error: ', response.error);
+      } else {
+        const source = { uri: response.assets[0].uri };
+        setProfileImage(source);
 
-            const asyncEmail = await AsyncStorage.getItem('email');
+        const asyncEmail = await AsyncStorage.getItem('email');
 
-            if (!asyncEmail) {
-                console.error('Error: Email not found in AsyncStorage');
-                return;
-            }
-
-            // Upload image to the server
-            const formData = new FormData();
-            formData.append('profileImage', {
-                uri: response.assets[0].uri,
-                type: response.assets[0].type,
-                name: response.assets[0].fileName,
-            });
-            formData.append('email', asyncEmail); // Include email in the form data
-
-            try {
-                await axios.put('http://192.168.18.57:3800/user/profile/image', formData, {
-                    headers: {
-                        'Content-Type': 'multipart/form-data',
-                    },
-                });
-                console.log('Profile image uploaded successfully');
-            } catch (error) {
-                console.error('Error uploading profile image:', error);
-            }
+        if (!asyncEmail) {
+          console.error('Error: Email not found in AsyncStorage');
+          return;
         }
+
+        // Upload image to the server
+        const formData = new FormData();
+        formData.append('profileImage', {
+          uri: response.assets[0].uri,
+          type: response.assets[0].type,
+          name: response.assets[0].fileName,
+        });
+        formData.append('email', asyncEmail); // Include email in the form data
+
+        try {
+          await axios.put(`${config.apiBaseUrl}/user/profile/image`, formData, {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+          });
+          console.log('Profile image uploaded successfully');
+        } catch (error) {
+          console.error('Error uploading profile image:', error);
+        }
+      }
     });
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={navigation.goBack} style={styles.backButton}>
-          <Icon name="arrow-back" size={24} color="#007AFF" />
+    <ScrollView style={tw`flex-1 bg-white`}>
+      <View style={tw`flex-row justify-between items-center px-5 py-3 bg-white border-b border-gray-300`}>
+        <TouchableOpacity onPress={navigation.goBack}>
+          <Icon name="arrow-back" size={24} color="black" />
         </TouchableOpacity>
-        <Text style={styles.title}>My Profile</Text>
-        <TouchableOpacity onPress={handleSavePress} style={styles.saveButton}>
-          <Icon name="checkmark" size={24} color="#007AFF" />
+        <Text style={tw`text-lg font-bold`}>Edit Profil</Text>
+        <TouchableOpacity onPress={handleSavePress}>
+          <Icon name="checkmark" size={24} color="black" />
         </TouchableOpacity>
       </View>
-      <View style={styles.profileContainer}>
-        <TouchableOpacity onPress={pickImage}>
-          <Image source={profileImage} style={styles.profileImage} />
-        </TouchableOpacity>
-        <Text style={styles.profileName}>{username}</Text>
-        <Text style={styles.profileTitle}>Executive Director</Text>
+      <View style={tw`items-center py-5`}>
+        <View style={tw`flex-row items-center`}>
+          <TouchableOpacity onPress={pickImage}>
+            <Image source={profileImage ? profileImage : defaultProfileImage} style={tw`w-24 h-24 rounded-full`} />
+          </TouchableOpacity>
+          <Text style={tw`text-blue-500 ml-4`}>Unggah Foto Profil +</Text>
+        </View>
         <TextInput
-          style={styles.profileDescription}
+          style={tw`text-center mt-2 text-black border-b border-gray-300 mx-10`}
           value={profileDescription}
           onChangeText={setProfileDescription}
+          placeholder="Tanpa keberanian, tak ada kemenangan. Tanpa perjuangan, tak ada happy ending."
           multiline
         />
       </View>
-      <View style={styles.infoContainer}>
-        <View style={styles.infoRow}>
-          <Icon name="mail-outline" size={20} color="#fff" />
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email Address</Text>
+      <View style={tw`px-5 mx-5`}>
+        <View style={tw`border-b border-gray-300 py-2`}>
+          <Text style={tw`text-gray-500`}>Email</Text>
+          <View style={tw`flex-row items-center`}>
+            <Icon name="mail-outline" size={20} color="gray" style={tw`mr-3`} />
             <TextInput
-              style={styles.infoText}
+              style={tw`text-black flex-1`}
               value={email}
-              editable={false}
+              onChangeText={setEmail}
+              placeholder="Enter Email"
             />
           </View>
         </View>
-        <View style={styles.infoRow}>
-          <Icon name="person-outline" size={20} color="#fff" />
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Username</Text>
+        <View style={tw`border-b border-gray-300 py-2`}>
+          <Text style={tw`text-gray-500`}>Username</Text>
+          <View style={tw`flex-row items-center`}>
+            <Icon name="person-outline" size={20} color="gray" style={tw`mr-3`} />
             <TextInput
-              style={styles.infoText}
+              style={tw`text-black flex-1`}
               value={username}
               onChangeText={setUsername}
+              placeholder="Enter Username"
             />
           </View>
         </View>
-        <View style={styles.infoRow}>
-          <Icon name="lock-closed-outline" size={20} color="#fff" />
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Current Password</Text>
+        <View style={tw`border-b border-gray-300 py-2`}>
+          <Text style={tw`text-gray-500`}>Current Password</Text>
+          <View style={tw`flex-row items-center`}>
+            <Icon name="lock-closed-outline" size={20} color="gray" style={tw`mr-3`} />
             <TextInput
-              style={styles.infoText}
+              style={tw`text-black flex-1`}
               secureTextEntry={!isPasswordVisible}
               value={password}
-              editable={false}
+              onChangeText={setPassword}
+              placeholder="Enter Current Password"
             />
-            <TouchableOpacity onPress={togglePasswordVisibility} style={styles.eyeIcon}>
-              <Icon name={isPasswordVisible ? "eye-off-outline" : "eye-outline"} size={20} color="#fff" />
+            <TouchableOpacity onPress={togglePasswordVisibility}>
+              <Icon name={isPasswordVisible ? "eye-off-outline" : "eye-outline"} size={20} color="gray" />
             </TouchableOpacity>
           </View>
         </View>
-        <View style={styles.infoRow}>
-          <Icon name="lock-closed-outline" size={20} color="#fff" />
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>New Password</Text>
+        <View style={tw`border-b border-gray-300 py-2`}>
+          <Text style={tw`text-gray-500`}>New Password</Text>
+          <View style={tw`flex-row items-center`}>
+            <Icon name="lock-closed-outline" size={20} color="gray" style={tw`mr-3`} />
             <TextInput
-              style={styles.infoText}
+              style={tw`text-black flex-1`}
               secureTextEntry={!isNewPasswordVisible}
               value={newPassword}
               onChangeText={setNewPassword}
+              placeholder="Enter New Password"
             />
-            <TouchableOpacity onPress={toggleNewPasswordVisibility} style={styles.eyeIcon}>
-              <Icon name={isNewPasswordVisible ? "eye-off-outline" : "eye-outline"} size={20} color="#fff" />
+            <TouchableOpacity onPress={toggleNewPasswordVisibility}>
+              <Icon name={isNewPasswordVisible ? "eye-off-outline" : "eye-outline"} size={20} color="gray" />
             </TouchableOpacity>
           </View>
         </View>
-        <View style={styles.infoRow}>
-          <Icon name="lock-closed-outline" size={20} color="#fff" />
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Confirm New Password</Text>
+        <View style={tw`border-b border-gray-300 py-2`}>
+          <Text style={tw`text-gray-500`}>Confirm New Password</Text>
+          <View style={tw`flex-row items-center`}>
+            <Icon name="lock-closed-outline" size={20} color="gray" style={tw`mr-3`} />
             <TextInput
-              style={styles.infoText}
+              style={tw`text-black flex-1`}
               secureTextEntry={!isConfirmPasswordVisible}
               value={confirmPassword}
               onChangeText={setConfirmPassword}
+              placeholder="Confirm New Password"
             />
-            <TouchableOpacity onPress={toggleConfirmPasswordVisibility} style={styles.eyeIcon}>
-              <Icon name={isConfirmPasswordVisible ? "eye-off-outline" : "eye-outline"} size={20} color="#fff" />
+            <TouchableOpacity onPress={toggleConfirmPasswordVisibility}>
+              <Icon name={isConfirmPasswordVisible ? "eye-off-outline" : "eye-outline"} size={20} color="gray" />
             </TouchableOpacity>
           </View>
         </View>
-        <Text style={styles.passwordHint}>Password should contain at least 8 characters!</Text>
       </View>
     </ScrollView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 15,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
-  },
-  backButton: {
-    padding: 10,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  saveButton: {
-    padding: 10,
-  },
-  profileContainer: {
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#fff',
-  },
-  profileImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 2, // Add border width
-    borderColor: '#007AFF', // Add border color
-    marginBottom: 10,
-  },
-  profileName: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  profileTitle: {
-    fontSize: 18,
-    color: '#666',
-    marginBottom: 10,
-  },
-  profileDescription: {
-    fontSize: 16,
-    color: '#666',
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
-    width: '100%',
-    textAlign: 'center',
-  },
-  infoContainer: {
-    padding: 20,
-    backgroundColor: '#0033A0',
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  inputContainer: {
-    flex: 1,
-    marginLeft: 10,
-  },
-  label: {
-    fontSize: 14,
-    color: '#fff',
-    marginBottom: 5,
-  },
-  infoText: {
-    fontSize: 16,
-    color: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#fff',
-  },
-  eyeIcon: {
-    position: 'absolute',
-    right: 0,
-    padding: 10,
-  },
-  passwordHint: {
-    fontSize: 12,
-    color: '#fff',
-    marginTop: 10,
-    textAlign: 'center',
-  },
-});
 
 export default EditProfileScreen;

@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
-import { Text, StyleSheet, View, Image } from 'react-native';
+import { Text, View, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAsyncStorage } from '@react-native-async-storage/async-storage';
+import tw from 'twrnc';
 
 const SplashScreen = () => {
   const navigation = useNavigation();
@@ -12,9 +13,9 @@ const SplashScreen = () => {
       const onboarded = await getOnboardingStatus();
       
       if (onboarded !== null) {
-        navigation.navigate('Login');
+        navigation.replace('Login');
       } else {
-        navigation.navigate('Onboarding');
+        navigation.replace('Onboarding');
       }
     };
 
@@ -24,50 +25,14 @@ const SplashScreen = () => {
   }, [navigation, getOnboardingStatus]);
 
   return (
-    <View style={styles.splashScreen}>
-      <View style={styles.content}>
-        <Image source={require('../assets/Logo_Dimple.png')} style={styles.logo} />
-      </View>
-      <View style={styles.footer}>
-        <Text style={styles.text}>created by</Text>
-        <Image source={require('../assets/logopkbi_KEPRI.png')} style={styles.footerLogo} />
+    <View style={tw`flex-1 bg-white justify-center items-center`}>
+      <Image source={require('../assets/Logo_Dimple.png')} style={tw`w-50 h-50`} resizeMode="contain" />
+      <View style={tw`absolute bottom-10 items-center`}>
+        <Text style={tw`text-sm text-gray-700 mb-2`}>created by</Text>
+        <Image source={require('../assets/logopkbi_KEPRI.png')} style={tw`w-30 h-15`} resizeMode="contain" />
       </View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  splashScreen: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  logo: {
-    width: 200,
-    height: 200,
-    resizeMode: 'contain',
-  },
-  footer: {
-    alignItems: 'center',
-    position: 'absolute',
-    bottom: 20,
-  },
-  text: {
-    fontSize: 10,
-    color: '#333',
-    marginBottom: -35,
-  },
-  footerLogo: {
-    width: 150,
-    height: 150,
-    resizeMode: 'contain',
-  },
-});
 
 export default SplashScreen;

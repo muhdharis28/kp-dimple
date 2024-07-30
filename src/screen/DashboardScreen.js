@@ -1,326 +1,297 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity, Image } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, TextInput, FlatList, TouchableOpacity, Image, Alert, ScrollView } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import { useNavigation } from '@react-navigation/native';
-import { AuthContext } from './AuthProvider';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
+import { Menu, MenuItem } from 'react-native-material-menu';
+import config from './config'; // Import the configuration
+import tw from 'twrnc';
 
-const messages = [
-  {
-    id: '1',
-    name: 'Pak Dirut',
-    date: '19 Dec',
-    subject: 'Requesting event for 28 Dec 2024',
-    content: 'I am requesting blablablablablablablablablablablablablablablablablablablabla',
-    avatar: require('../assets/profilepicture.png')
-  },
-  {
-    id: '2',
-    name: 'Pak Dirut',
-    date: '19 Dec',
-    subject: 'Requesting event for 28 Dec 2024',
-    content: 'I am requesting blablablablablablablablablablablablablablablablablablablabla',
-    avatar: require('../assets/profilepicture.png')
-  },
-  {
-    id: '3',
-    name: 'Pak Dirut',
-    date: '19 Dec',
-    subject: 'Requesting event for 28 Dec 2024',
-    content: 'I am requesting blablablablablablablablablablablablablablablablablablablabla',
-    avatar: require('../assets/profilepicture.png')
-  },
-  {
-    id: '4',
-    name: 'Pak Dirut',
-    date: '19 Dec',
-    subject: 'Requesting event for 28 Dec 2024',
-    content: 'I am requesting blablablablablablablablablablablablablablablablablablablabla',
-    avatar: require('../assets/profilepicture.png')
-  }
-];
-
-const employees = [
-  {
-    value: 'junior',
-    user: {
-      name: 'Junior Garcia',
-      avatar: 'https://avatars.githubusercontent.com/u/30373425?v=4',
-      username: 'jrgarciadev',
-      url: 'https://twitter.com/jrgarciadev',
-      role: 'Software Developer',
-      status: 'Active',
-    }
-  },
-  {
-    value: 'johndoe',
-    user: {
-      name: 'John Doe',
-      avatar: 'https://i.pravatar.cc/300?u=a042581f4e29026707d',
-      username: 'johndoe',
-      url: '#',
-      role: 'Product Designer',
-      status: 'Vacation',
-    }
-  },
-  {
-    value: 'zoeylang',
-    user: {
-      name: 'Zoey Lang',
-      avatar: 'https://i.pravatar.cc/300?u=a042581f4e29026704d',
-      username: 'zoeylang',
-      url: '#',
-      role: 'Technical Writer',
-      status: 'Out of office',
-    }
-  },
-  {
-    value: 'william',
-    user: {
-      name: 'William Howard',
-      avatar: 'https://i.pravatar.cc/300?u=a048581f4e29026701d',
-      username: 'william',
-      url: '#',
-      role: 'Sales Manager',
-      status: 'Active',
-    }
-  },
-  {
-    value: 'william',
-    user: {
-      name: 'William Howard',
-      avatar: 'https://i.pravatar.cc/300?u=a048581f4e29026701d',
-      username: 'william',
-      url: '#',
-      role: 'Sales Manager',
-      status: 'Active',
-    }
-  }
-];
+const defaultProfileImage = require('../assets/default-profile.png'); // Adjust the path as needed
+const appLogo = require('../assets/Logo_Dimple.png'); // Add your app logo here
 
 const DashboardScreen = () => {
   const navigation = useNavigation();
-  const [selectedTab, setSelectedTab] = useState('All');
+  const [selectedTab, setSelectedTab] = useState('Semua');
+  const [profileImageUrl, setProfileImageUrl] = useState(null);
+  const [events, setEvents] = useState([]);
+  const [filteredEvents, setFilteredEvents] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [role, setRole] = useState('');
+  const [email, setEmail] = useState('');
+  const menuRef = useRef(null);
+
+  const showMenu = () => {
+    if (menuRef.current) {
+      menuRef.current.show();
+    }
+  };
+
+  const hideMenu = () => {
+    if (menuRef.current) {
+      menuRef.current.hide();
+    }
+  };
 
   const handleProfile = () => {
+    hideMenu();
     navigation.navigate('Profile');
   };
 
-  return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerText}>All inbox</Text>
-        <TouchableOpacity activeOpacity={0.8} onPress={handleProfile}>
-          <Image source={require('../assets/profilepicture.png')} style={styles.profileImage} />
-        </TouchableOpacity>
-      </View>
+  const handleListUser = () => {
+    hideMenu();
+    navigation.navigate('ListUser');
+  };
 
-      <View style={styles.searchContainer}>
-        <Icon name="search" size={25} color="white" style={styles.searchIcon} />
-        <TextInput placeholder="Search" placeholderTextColor="white" style={styles.searchInput} />
-      </View>
+  const handleManageDivisions = () => {
+    hideMenu();
+    navigation.navigate('ManageDivisions');
+  };
 
-        <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={[styles.tabButton, selectedTab === 'All' && styles.tabButtonActive]}
-            onPress={() => setSelectedTab('All')}
-          >
-            <Text style={[styles.tabButtonText, selectedTab === 'All' && styles.tabButtonTextActive]}>All</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tabButton, selectedTab === 'Process' && styles.tabButtonActive]}
-            onPress={() => setSelectedTab('Process')}
-          >
-            <Text style={[styles.tabButtonText, selectedTab === 'Process' && styles.tabButtonTextActive]}>Process</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tabButton, selectedTab === 'Complete' && styles.tabButtonActive]}
-            onPress={() => setSelectedTab('Complete')}
-          >
-            <Text style={[styles.tabButtonText, selectedTab === 'Complete' && styles.tabButtonTextActive]}>Complete</Text>
+  const handleCreate = () => {
+    navigation.navigate('CreateDelegasi');
+  };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchUserProfile().then(() => fetchEvents());
+    }, [])
+  );
+
+  useEffect(() => {
+    filterEvents();
+  }, [selectedTab, events]);
+
+  const fetchUserProfile = async () => {
+    try {
+      const asyncEmail = await AsyncStorage.getItem('email');
+      const asyncRole = await AsyncStorage.getItem('role');
+      const response = await axios.get(`${config.apiBaseUrl}/user/profile`, {
+        params: { email: asyncEmail }
+      });
+      const { profileImageUrl } = response.data.data;
+      setProfileImageUrl(profileImageUrl ? { uri: `${config.apiBaseUrl}${profileImageUrl}` } : defaultProfileImage);
+      setRole(asyncRole);
+      setEmail(asyncEmail);
+    } catch (error) {
+      console.error('Error fetching profile image URL:', error);
+      setProfileImageUrl(defaultProfileImage); // Fallback to default image on error
+    }
+  };
+
+  const fetchEvents = async () => {
+    try {
+      const response = await axios.get(`${config.apiBaseUrl}/event`);
+      const userEvents = role === 'delegation_handler'
+        ? response.data.data.filter(event => event.toPerson.email === email || event.userId === email)
+        : response.data.data;
+      setEvents(userEvents);
+      setFilteredEvents(userEvents);
+    } catch (error) {
+      console.error('Error fetching events:', error);
+    }
+  };
+
+  const confirmDelete = (eventId) => {
+    Alert.alert(
+      "Confirm Delete",
+      "Are you sure you want to delete this event?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "Delete",
+          onPress: () => handleDelete(eventId),
+          style: "destructive"
+        }
+      ]
+    );
+  };
+
+  const handleDelete = async (eventId) => {
+    try {
+      await axios.delete(`${config.apiBaseUrl}/event/${eventId}`);
+      fetchEvents(); // Refresh the events list after deletion
+    } catch (error) {
+      console.error('Error deleting event:', error);
+    }
+  };
+
+  const handleEventPress = (id) => {
+    navigation.navigate('DetailDelegasi', { eventId: id });
+  };
+
+  const handleSearch = async (query) => {
+    setSearchQuery(query);
+
+    if (query.trim() === '') {
+      filterEvents(events);
+      return;
+    }
+
+    try {
+      const response = await axios.get(`${config.apiBaseUrl}/event/search/${query}`);
+      const filtered = role === 'delegation_handler'
+        ? response.data.data.filter(event => event.toPerson.email === email || event.userId === email)
+        : response.data.data;
+      setFilteredEvents(filtered);
+    } catch (error) {
+      console.error('Error searching events:', error);
+    }
+  };
+
+  const filterEvents = (eventsToFilter = events) => {
+    let filtered;
+    switch (selectedTab) {
+      case 'Verifikasi':
+        filtered = eventsToFilter.filter(event =>
+          ['Perlu Verifikasi', 'Verifikasi Ditolak'].includes(event.status) &&
+          (role !== 'delegation_handler' || event.toPerson.email === email || event.userId === email)
+        );
+        break;
+      case 'Proses':
+        filtered = eventsToFilter.filter(event =>
+          ['Butuh Verifikasi Penerima', 'Penerima Setuju', 'Penerima Menolak', 'Ditolak'].includes(event.status) &&
+          (role !== 'delegation_handler' || event.toPerson.email === email || event.userId === email)
+        );
+        break;
+      case 'Selesai':
+        filtered = eventsToFilter.filter(event =>
+          event.status === 'Disetujui' &&
+          (role !== 'delegation_handler' || event.toPerson.email === email || event.userId === email)
+        );
+        break;
+      case 'Semua':
+      default:
+        filtered = eventsToFilter.filter(event =>
+          role !== 'delegation_handler' || event.toPerson.email === email || event.userId === email
+        );
+        break;
+    }
+    setFilteredEvents(filtered);
+  };
+
+  const divisionColors = {
+    Supervisor: '#424F5E',
+    'Senior Officer': '#7954F6',
+    'Technical Officer': '#FFAE00',
+    'Field Officer': '#11D69F',
+    'Community Provider': '#663F70',
+    Internship: '#EE3862',
+  };
+
+  const renderEventItem = ({ item }) => (
+    <TouchableOpacity onPress={() => handleEventPress(item.id)} style={tw`flex-row items-center py-3 border-b border-gray-300`}>
+      <Image
+        source={item.toPerson.profileImageUrl ? { uri: `${config.apiBaseUrl}${item.toPerson.profileImageUrl}` } : defaultProfileImage}
+        style={tw`w-15 h-15 rounded-full mr-4`}
+      />
+      <View style={tw`flex-1`}>
+        <View style={tw`flex-row justify-between items-center w-full mb-2`}>
+          <View style={tw`flex-row items-center`}>
+            <Text style={tw`text-black font-bold mr-2`}>{item.toPerson.username}</Text>
+            <Text style={[tw`text-sm`,{ color: divisionColors[item.toDivision.name] || '#000' }]}>{item.toDivision.name}</Text>
+          </View>
+        </View>
+        <View style={tw`flex-row justify-between items-center w-full mb-1`}>
+          <View style={tw`flex-row items-center`}>
+            <Text style={tw`text-base font-bold text-black`}>{item.title}</Text>
+          </View>
+          <Text style={tw`text-xs text-gray-500`}>{new Date(item.date).toLocaleDateString()}</Text>
+        </View>
+        <Text style={tw`text-sm text-gray-400 mb-2`}>{item.description}</Text>
+        <View style={tw`flex-row justify-between items-center w-full`}>
+          <Text style={tw`bg-[#002D7A] text-white text-xs px-2 py-1 rounded-full`}>{item.status}</Text>
+          <TouchableOpacity onPress={() => confirmDelete(item.id)} style={tw`p-2`}>
+            <Icon name="trash" size={20} color="#FF3B30" />
           </TouchableOpacity>
         </View>
+      </View>
+    </TouchableOpacity>
+  );
 
-        <FlatList
-          data={messages}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <View style={styles.messageContainer}>
-              <Image source={item.avatar} style={styles.avatar} />
-              <View style={styles.messageContent}>
-                <Text style={styles.messageTitle}>{item.name}</Text>
-                <Text style={styles.messageSubject}>{item.subject}</Text>
-                <Text style={styles.messageText}>{item.content}</Text>
-              </View>
-              <Text style={styles.messageDate}>{item.date}</Text>
-            </View>
-          )}
+  return (
+    <View style={tw`flex-1 bg-white p-5`}>
+      <View style={tw`flex-row justify-between items-center mb-5`}>
+        <Image source={appLogo} style={tw`w-25 h-12 resize-contain`} />
+        {role === 'admin' ? (
+          <Menu
+            ref={menuRef}
+            anchor={
+              <TouchableOpacity onPress={showMenu} style={tw`p-2`}>
+                <Icon name="cog" size={24} color="black" />
+              </TouchableOpacity>
+            }
+            onRequestClose={hideMenu}
+          >
+            <MenuItem onPress={handleListUser}>Daftar Pengguna</MenuItem>
+            <MenuItem onPress={handleManageDivisions}>Daftar Divisi</MenuItem>
+            <MenuItem onPress={handleProfile}>Profil</MenuItem>
+          </Menu>
+        ) : (
+          <TouchableOpacity onPress={handleProfile}>
+            <Image source={profileImageUrl} style={tw`w-15 h-15 rounded-full mr-3`} />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      <View style={tw`flex-row items-center self-center bg-[#002D7A] rounded-full mb-5 h-12 w-full px-5`}>
+        <Icon name="search" size={25} color="white" style={tw`mr-2`} />
+        <TextInput
+          placeholder="Cari..."
+          placeholderTextColor="white"
+          style={tw`flex-1 text-lg text-white`}
+          value={searchQuery}
+          onChangeText={handleSearch}
         />
+      </View>
 
-        <TouchableOpacity style={styles.createButton}>
+      <View style={tw`h-12`}>
+        <ScrollView horizontal style={tw`border-b-2`} showsHorizontalScrollIndicator={false}>
+          <TouchableOpacity
+            style={[tw`px-5 py-2`, selectedTab === 'Semua' && tw`border-b-2 border-[#002D7A]`]}
+            onPress={() => setSelectedTab('Semua')}
+          >
+            <Text style={[tw`text-lg font-bold`, selectedTab === 'Semua' && tw`text-black`]}>Semua</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[tw`px-5 py-2`, selectedTab === 'Verifikasi' && tw`border-b-2 border-[#002D7A]`]}
+            onPress={() => setSelectedTab('Verifikasi')}
+          >
+            <Text style={[tw`text-lg font-bold`, selectedTab === 'Verifikasi' && tw`text-black`]}>Verifikasi</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[tw`px-5 py-2`, selectedTab === 'Proses' && tw`border-b-2 border-[#002D7A]`]}
+            onPress={() => setSelectedTab('Proses')}
+          >
+            <Text style={[tw`text-lg font-bold`, selectedTab === 'Proses' && tw`text-black`]}>Proses</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[tw`px-5 py-2`, selectedTab === 'Selesai' && tw`border-b-2 border-[#002D7A]`]}
+            onPress={() => setSelectedTab('Selesai')}
+          >
+            <Text style={[tw`text-lg font-bold`, selectedTab === 'Selesai' && tw`text-black`]}>Selesai</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
+
+      <FlatList
+        data={filteredEvents}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={renderEventItem}
+      />
+
+      {role === 'admin' && (
+        <TouchableOpacity style={tw`flex-row items-center absolute right-5 bottom-5 justify-center bg-[#002D7A] py-3 rounded-full w-32`} onPress={handleCreate}>
           <Icon name="pencil" size={20} color="#fff" />
-          <Text style={styles.createButtonText}>Create</Text>
+          <Text style={tw`text-white text-lg ml-2 font-bold`}>Tambah</Text>
         </TouchableOpacity>
+      )}
     </View>
   );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    padding: 20,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  headerText: {
-    fontSize: 30,
-    fontWeight: 'bold',
-    color: '#002D7A',
-    marginTop: 20,
-    marginBottom: 20,
-    marginLeft: 20,
-  },
-  profileImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 20,
-    marginRight: 12,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'center',
-    borderWidth: 1,
-    backgroundColor: '#002D7A',
-    borderRadius: 50,
-    marginBottom: 20,
-    height: 50,
-    width: '95%',
-    paddingHorizontal: 10,
-  },
-  searchIcon: {
-    marginRight: 10,
-    marginLeft: 10,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: 'white',
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-    borderBottomWidth: 2,
-  },
-  tabButton: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tabButtonActive: {
-    borderBottomColor: '#002D7A',
-    borderBottomWidth: 3,
-  },
-  tabButtonText: {
-    fontSize: 21,
-    fontWeight: 'bold',
-    color: 'black',
-  },
-  tabButtonTextActive: {
-    color: 'black',
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginBottom: 20,
-  },
-  buttonText: {
-    color: '#002D7A',
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginRight: 30,
-    textDecorationLine: "underline",
-  },
-  messageContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 25,
-    marginRight: 15,
-  },
-  messageContent: {
-    flex: 1,
-  },
-  messageTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#002D7A',
-    marginBottom: 5,
-  },
-  messageSubject: {
-    fontSize: 14,
-    color: 'black',
-    marginBottom: 5,
-    fontWeight: 'bold',
-  },
-  messageText: {
-    fontSize: 14,
-    color: 'black',
-  },
-  messageDate: {
-    fontSize: 12,
-    color: 'black',
-    bottom: 31,
-    fontWeight: 'bold',
-  },
-  createButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    position: 'absolute',
-    right: 20,
-    bottom: 20,
-    justifyContent: 'center',
-    backgroundColor: '#002D7A',
-    paddingVertical: 15,
-    borderRadius: 30,
-    bottom: 60,
-    width: '40%',
-  },
-  createButtonText: {
-    color: '#fff',
-    fontSize: 20,
-    marginLeft: 10,
-    bottom: 2,
-    fontWeight: 'bold',
-  },
-  editContainer: {
-    marginTop: 20,
-  },
-  editTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    color: '#002D7A',
-
-  },
-  selectedText: {
-    marginTop: 10,
-    color: '#002D7A',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-});
+};
 
 export default DashboardScreen;
