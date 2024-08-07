@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, FlatList, TouchableOpacity, Alert, Modal } from 'react-native';
+import { View, Text, TextInput, FlatList, TouchableOpacity, Modal } from 'react-native';
 import axios from 'axios';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -34,7 +34,7 @@ const ManageDivisions = () => {
 
   const handleAddDivision = async () => {
     if (!divisionName.trim()) {
-      Alert.alert('Error', 'Division name cannot be empty');
+      showErrorModal('Error', 'Nama divisi tidak boleh kosong');
       return;
     }
 
@@ -46,7 +46,7 @@ const ManageDivisions = () => {
       fetchDivisions(); // Refresh the list of divisions
     } catch (error) {
       console.error('Error adding division:', error);
-      Alert.alert('Error', 'Could not add division');
+      showErrorModal('Error', 'Tidak dapat menambah divisi');
     } finally {
       setLoading(false);
     }
@@ -65,7 +65,7 @@ const ManageDivisions = () => {
       setDeleteModalVisible(false);
     } catch (error) {
       console.error('Error deleting division:', error);
-      Alert.alert('Error', 'Could not delete division');
+      showErrorModal('Error', 'Tidak dapat menghapus divisi');
     } finally {
       setLoading(false);
     }
@@ -79,7 +79,7 @@ const ManageDivisions = () => {
 
   const handleEditDivision = async () => {
     if (!editDivisionName.trim()) {
-      Alert.alert('Error', 'Division name cannot be empty');
+      showErrorModal('Error', 'Nama divisi tidak boleh kosong');
       return;
     }
 
@@ -90,11 +90,21 @@ const ManageDivisions = () => {
       fetchDivisions(); // Refresh the list of divisions
     } catch (error) {
       console.error('Error editing division:', error);
-      Alert.alert('Error', 'Could not edit division');
+      showErrorModal('Error', 'Tidak dapat mengedit divisi');
     } finally {
       setLoading(false);
     }
   };
+
+  const showErrorModal = (title, message) => {
+    setModalTitle(title);
+    setModalMessage(message);
+    setModalVisible(true);
+  };
+
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalTitle, setModalTitle] = useState('');
+  const [modalMessage, setModalMessage] = useState('');
 
   const renderDivisionItem = ({ item }) => (
     <View style={tw`flex-row items-center justify-between bg-[#F6F6F6] p-4 rounded-3xl mb-3 shadow-md`}>
@@ -197,6 +207,31 @@ const ManageDivisions = () => {
                 <Text style={tw`text-white font-bold`}>Hapus</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+      <Modal
+        transparent={true}
+        animationType="fade"
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={tw`flex-1 justify-center items-center bg-black bg-opacity-50`}>
+          <View style={tw`bg-white p-5 rounded-lg w-4/5 items-center`}>
+            <Icon
+              name={modalTitle === 'Error' ? "alert-circle-outline" : "checkmark-circle-outline"}
+              size={50}
+              color={modalTitle === 'Error' ? "red" : "green"}
+              style={tw`mb-3`}
+            />
+            <Text style={tw`text-lg font-bold mb-3 text-center`}>{modalTitle}</Text>
+            <Text style={tw`text-base mb-5 text-center text-gray-600`}>{modalMessage}</Text>
+            <TouchableOpacity
+              style={tw`bg-blue-600 p-3 rounded-lg w-full`}
+              onPress={() => setModalVisible(false)}
+            >
+              <Text style={tw`text-white text-base text-center`}>Tutup</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>

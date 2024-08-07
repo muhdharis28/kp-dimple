@@ -60,13 +60,13 @@ const ListUser = () => {
 
   return (
     <View style={tw`flex-1 bg-white`}>
-      <View style={tw`flex-row items-center px-4 py-4`}>
+      <View style={tw`flex-row items-center px-4 py-7`}>
         <TouchableOpacity onPress={() => navigation.navigate('Dashboard')} style={tw`mr-4`}>
           <Icon name="arrow-back" size={24} color="#002D7A" />
         </TouchableOpacity>
         <Text style={tw`text-xl font-bold text-[#002D7A]`}>Daftar Pengguna</Text>
       </View>
-      <View style={tw`flex-row items-center bg-[#002D7A] rounded-full mx-4 mb-4 p-2`}>
+      <View style={tw`flex-row items-center bg-[#002D7A] rounded-full mx-4 mb-4`}>
         <Icon name="search" size={25} color="white" style={tw`ml-2`} />
         <TextInput
           placeholder="Cari..."

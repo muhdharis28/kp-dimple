@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
-  View, Text, TextInput, Button, Image, StyleSheet, TouchableOpacity,
-  ScrollView, ActivityIndicator
+  View, Text, TextInput, Image, TouchableOpacity,
+  ScrollView, ActivityIndicator, StyleSheet, Modal
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import DocumentPicker from 'react-native-document-picker';
@@ -9,9 +9,13 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import { useNavigation } from '@react-navigation/native';
 import axios from 'axios';
 import Icon from 'react-native-vector-icons/Ionicons';
+import Icon2 from 'react-native-vector-icons/MaterialCommunityIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
-import config from './config'; // Import the configuration
+import tw from 'twrnc';
+import { Menu, MenuItem } from 'react-native-material-menu';
+import config from './config';
+import { Dialog, ALERT_TYPE, AlertNotificationRoot } from 'react-native-alert-notification';
 
 const CreateDelegasi = () => {
   const navigation = useNavigation();
@@ -29,6 +33,8 @@ const CreateDelegasi = () => {
   });
   const [users, setUsers] = useState([]);
   const [divisions, setDivisions] = useState([]);
+  const menuRef = useRef(null);
+  const [modalVisible, setModalVisible] = useState(false);
 
   useEffect(() => {
     const getUserId = async () => {
@@ -111,6 +117,46 @@ const CreateDelegasi = () => {
     }
   };
 
+  const validateForm = () => {
+    if (!formData.toDivisionId) {
+      Dialog.show({
+        type: ALERT_TYPE.DANGER,
+        title: 'Validasi',
+        textBody: 'Silahkan pilih divisi.',
+        button: 'Tutup'
+      });
+      return false;
+    }
+    if (!formData.toPersonId) {
+      Dialog.show({
+        type: ALERT_TYPE.DANGER,
+        title: 'Validasi',
+        textBody: 'Silahkan pilih penerima.',
+        button: 'Tutup'
+      });
+      return false;
+    }
+    if (!formData.title) {
+      Dialog.show({
+        type: ALERT_TYPE.DANGER,
+        title: 'Validasi',
+        textBody: 'Silahkan masukan judul.',
+        button: 'Tutup'
+      });
+      return false;
+    }
+    if (!formData.description) {
+      Dialog.show({
+        type: ALERT_TYPE.DANGER,
+        title: 'Validasi',
+        textBody: 'Silahkan masukan deskripsi.',
+        button: 'Tutup'
+      });
+      return false;
+    }
+    return true;
+  };
+
   const uploadDescriptionImage = async () => {
     if (descriptionImage) {
       const formData = new FormData();
@@ -161,11 +207,15 @@ const CreateDelegasi = () => {
   };
 
   const handleSubmit = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
     setLoading(true);
     try {
       const descriptionImageUrl = await uploadDescriptionImage();
       const eventFileUrls = await uploadEventFiles();
-
+  
       const eventFormData = {
         ...formData,
         descriptionImageUrl,
@@ -177,244 +227,244 @@ const CreateDelegasi = () => {
           'Content-Type': 'application/json',
         },
       });
-
-      alert('Event created successfully!');
-      navigation.goBack();
+  
+      setModalVisible(true);
     } catch (error) {
       if (error.response) {
         console.error('Error creating event:', error.response.data);
-        alert(`Error creating event: ${error.response.data.message}`);
+        Dialog.show({
+          type: ALERT_TYPE.DANGER,
+          title: 'Gagal',
+          textBody: `Error: ${error.response.data.message}`,
+          button: 'Tutup'
+        });
       } else if (error.request) {
         console.error('Network error:', error.request);
-        alert('Network error. Please check your connection.');
+        Dialog.show({
+          type: ALERT_TYPE.DANGER,
+          title: 'Error Jaringan',
+          textBody: 'Periksa koneksi.',
+          button: 'Tutup'
+        });
       } else {
         console.error('Error:', error.message);
-        alert(`Error: ${error.message}`);
+        Dialog.show({
+          type: ALERT_TYPE.DANGER,
+          title: 'Gagal',
+          textBody: `Error: ${error.message}`,
+          button: 'Tutup'
+        });
       }
     } finally {
       setLoading(false);
     }
   };
 
+  const showMenu = () => {
+    menuRef.current.show();
+  };
+
+  const hideMenu = () => {
+    menuRef.current.hide();
+  };
+
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={tw`flex-1 justify-center items-center`}>
         <ActivityIndicator size="large" color="#007AFF" />
       </View>
     );
   }
 
+  const customMenuStyles = StyleSheet.create({
+    menuContainer: {
+      margin: 0,
+      borderRadius: 40,
+      minWidth: 0,
+      height: 0,
+    },
+    menuItem: {
+      justifyContent: 'center',
+      alignItems: 'center',
+      minWidth: 40,
+      height: 40,
+      marginVertical: 5,
+    },
+    iconStyle: {
+      color: '#2563EB',
+    },
+  });
+
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>X</Text>
+    <ScrollView style={tw`flex-1 bg-white`}>
+      <View style={tw`flex-row justify-between items-center px-5 py-5 bg-white`}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Text style={tw`text-lg font-bold text-gray-600`}>
+          <Icon name="close" size={24} color="#007AFF" />
+          </Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Create Delegasi</Text>
-      </View>
-
-      <Text style={styles.label}>To:</Text>
-      <View style={styles.row}>
-        <Picker
-          selectedValue={formData.toDivisionId}
-          onValueChange={(itemValue) => handleInputChange('toDivisionId', itemValue)}
-          style={styles.picker}
+        <Text style={tw`text-lg font-bold text-blue-600`}>Tambah Delegasi</Text>
+        <Menu
+          ref={menuRef}
+          anchor={
+            <TouchableOpacity onPress={showMenu}>
+              <Icon2 name="attachment" size={24} color="black" />
+            </TouchableOpacity>
+          }
+          onRequestClose={hideMenu}
+          contentStyle={customMenuStyles.menuContainer}
         >
-          <Picker.Item label="Select Division" value="" />
-          {divisions.map((division) => (
-            <Picker.Item key={division.id} label={division.name} value={division.id} />
-          ))}
-        </Picker>
-        <Picker
-          selectedValue={formData.toPersonId}
-          onValueChange={(itemValue) => handleInputChange('toPersonId', itemValue)}
-          style={styles.picker}
-        >
-          <Picker.Item label="Select Person" value="" />
-          {users.map(user => (
-            <Picker.Item key={user.id} label={user.username} value={user.id} />
-          ))}
-        </Picker>
+          <MenuItem
+            onPress={pickFiles}
+            style={customMenuStyles.menuItem}
+          >
+            <Icon name="document-outline" size={24} style={customMenuStyles.iconStyle} />
+          </MenuItem>
+          <MenuItem
+            onPress={pickImage}
+            style={customMenuStyles.menuItem}
+          >
+            <Icon name="image-outline" size={24} style={customMenuStyles.iconStyle} />
+          </MenuItem>
+        </Menu>
       </View>
 
-      <Text style={styles.label}>Title:</Text>
-      <TextInput
-        style={styles.input}
-        value={formData.title}
-        onChangeText={(value) => handleInputChange('title', value)}
-        placeholder="Event Title"
-      />
+      <View style={tw`px-5 mt-5`}>
+        <AlertNotificationRoot style={tw`absolute top-0 left-0 right-0`} />
+        <View style={tw`flex-row`}>
+          <View style={tw`flex-1`}>
+            <Text style={tw`text-gray-600 text-base`}>Tujuan:</Text>
+          </View>
+        </View>
+        <View style={tw`flex-row items-center`}>
+          <Text style={tw`text-gray-600 mb-1`}>Divisi:</Text>
+          <Picker
+            selectedValue={formData.toDivisionId}
+            onValueChange={(itemValue) => handleInputChange('toDivisionId', itemValue)}
+            style={tw`flex-1 ml-2 text-black`}
+          >
+            <Picker.Item label="Pilih divisi..." value="" />
+            {divisions.map((division) => (
+              <Picker.Item key={division.id} label={division.name} value={division.id} style={tw`flex-1 ml-2 text-black`} />
+            ))}
+          </Picker>
+        </View>
+        <View style={tw`flex-row items-center`}>
+          <Text style={tw`text-gray-600 mb-1`}>Penerima:</Text>
+          <Picker
+            selectedValue={formData.toPersonId}
+            onValueChange={(itemValue) => handleInputChange('toPersonId', itemValue)}
+            style={tw`flex-1 ml-2`}
+          >
+            <Picker.Item label="Pilih penerima..." value="" />
+            {users.map(user => (
+              <Picker.Item key={user.id} label={user.username} value={user.id} />
+            ))}
+          </Picker>
+        </View>
 
-      <Text style={styles.label}>Date:</Text>
-      <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.dateInput}>
-        <Text>{date.toDateString()}</Text>
-      </TouchableOpacity>
-      {showDatePicker && (
-        <DateTimePicker
-          value={date}
-          mode="date"
-          display="default"
-          onChange={onChange}
-        />
-      )}
+        <View style={tw`flex-row items-center`}>
+          <Text style={tw`text-gray-600 mr-2 text-base`}>Judul:</Text>
+          <TextInput
+            style={tw`flex-1 p-2 text-black`}
+            value={formData.title}
+            onChangeText={(value) => handleInputChange('title', value)}
+            placeholder="Isi judul..."
+          />
+        </View>
+        <View style={tw`border-b border-gray-300 mb-5`}/>
+        <View style={tw`flex-row items-center`}>
+          <Text style={tw`text-gray-600 mr-2 text-base`}>Tanggal:</Text>
+          <Text style={tw`flex-1 p-2 text-black`}>{date.toDateString()}</Text>
+          <TouchableOpacity onPress={() => setShowDatePicker(true)} style={tw`p-2 ml-auto`}>
+            <Icon name="calendar" size={24} color="gray" />
+          </TouchableOpacity>
+          {showDatePicker && (
+            <DateTimePicker
+              value={date}
+              mode="date"
+              display="default"
+              onChange={onChange}
+            />
+          )}
+        </View>
+        <View style={tw`border-b border-gray-300 mb-5`}/>
+        <View style={tw`flex-row items-center`}>
+          <Text style={tw`text-gray-600 mr-2 text-base`}>Deskripsi:</Text>
+        </View>
+        
+        {descriptionImage && (
+          <View style={tw`mb-4`}>
+            <Image source={{ uri: descriptionImage.uri }} style={tw`w-full h-40 mt-5 rounded-lg`} />
+            <TouchableOpacity onPress={removeImage} style={tw`absolute top-7 right-2`}>
+              <Icon name="close-circle" size={24} color="red" />
+            </TouchableOpacity>
+          </View>
+        )}
+        <TextInput
+            style={tw``}
+            value={formData.description}
+            onChangeText={(value) => handleInputChange('description', value)}
+            placeholder="Isi deskripsi..."
+            multiline
+          />
 
-      <Text style={styles.label}>Description:</Text>
-      <View style={styles.iconRow}>
-        <TouchableOpacity onPress={pickImage} style={styles.iconButton}>
-          <Icon name="image-outline" size={40} color="#007AFF" />
+          <View style={tw`flex-row flex-wrap`}>
+            {eventFiles.map((file, index) => (
+              <View
+                key={index}
+                style={[
+                  tw`flex-row items-center p-2 m-1 border rounded-full`,
+                  { borderColor: '#000' },
+                ]}
+              >
+                <Icon2
+                  name="file-pdf-box"
+                  size={24}
+                  color="red"
+                  style={tw`mr-2`}
+                />
+                <Text style={tw`text-black`} numberOfLines={1} ellipsizeMode="tail">
+                  {file.name.length > 10
+                    ? `${file.name.substring(0, 10)}...`
+                    : file.name}
+                </Text>
+                <TouchableOpacity onPress={() => removeFile(index)} style={tw`ml-2`}>
+                  <Icon name="close" size={16} color="black" />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+
+        <TouchableOpacity onPress={handleSubmit} style={tw`bg-blue-600 p-3 rounded-full items-center mt-10 mb-10 mx-10`}>
+          <Text style={tw`text-white text-lg font-bold`}>Kirim</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={pickFiles} style={styles.iconButton}>
-          <Icon name="document-outline" size={40} color="#007AFF" />
-        </TouchableOpacity>
+
+        <Modal
+        transparent={true}
+        animationType="slide"
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={tw`flex-1 justify-center items-center bg-black bg-opacity-50`}>
+          <View style={tw`bg-white p-5 rounded-lg w-4/5`}>
+            <Text style={tw`text-lg font-bold mb-3 text-center`}>Event Berhasil Dibuat</Text>
+            <Text style={tw`text-center text-base mb-4`}>Event telah berhasil dibuat. Klik "Tutup" untuk kembali.</Text>
+            <TouchableOpacity
+              style={tw`bg-blue-600 p-3 rounded-full items-center`}
+              onPress={() => {
+                setModalVisible(false);
+                navigation.navigate('Dashboard');
+              }}
+            >
+              <Text style={tw`text-white text-lg font-bold`}>Tutup</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
       </View>
-      {descriptionImage && (
-        <View style={styles.previewContainer}>
-          <Image source={{ uri: descriptionImage.uri }} style={styles.previewImage} />
-          <TouchableOpacity onPress={removeImage} style={styles.removeButton}>
-            <Icon name="close-circle" size={24} color="red" />
-          </TouchableOpacity>
-        </View>
-      )}
-      <TextInput
-        style={styles.textarea}
-        value={formData.description}
-        onChangeText={(value) => handleInputChange('description', value)}
-        placeholder="Description"
-        multiline
-      />
-
-      {eventFiles.map((file, index) => (
-        <View key={index} style={styles.fileItem}>
-          <Text style={styles.fileName}>{file.name}</Text>
-          <TouchableOpacity onPress={() => removeFile(index)}>
-            <Icon name="close-circle" size={24} color="red" />
-          </TouchableOpacity>
-        </View>
-      ))}
-
-      <TouchableOpacity onPress={handleSubmit} style={styles.saveButton}>
-        <Text style={styles.saveButtonText}>Save</Text>
-      </TouchableOpacity>
     </ScrollView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: '#fff',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  backButton: {
-    padding: 10,
-  },
-  backButtonText: {
-    fontSize: 18,
-    color: '#007AFF',
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#007AFF',
-  },
-  label: {
-    marginVertical: 5,
-    fontSize: 16,
-    color: '#000',
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    padding: 10,
-    borderRadius: 5,
-    marginBottom: 10,
-    flex: 1,
-  },
-  picker: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 5,
-    marginBottom: 10,
-  },
-  dateInput: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    padding: 10,
-    borderRadius: 5,
-    marginBottom: 10,
-  },
-  textarea: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    padding: 10,
-    borderRadius: 5,
-    height: 100,
-    marginBottom: 10,
-  },
-  iconRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  iconButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 80,
-    height: 80,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 10,
-    marginHorizontal: 10,
-  },
-  previewContainer: {
-    position: 'relative',
-    width: '100%',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  previewImage: {
-    width: '100%',
-    height: 200,
-  },
-  removeButton: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-  },
-  fileItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  fileName: {
-    fontSize: 16,
-  },
-  saveButton: {
-    padding: 15,
-    backgroundColor: '#007AFF',
-    borderRadius: 5,
-    alignItems: 'center',
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontSize: 16,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});
 
 export default CreateDelegasi;

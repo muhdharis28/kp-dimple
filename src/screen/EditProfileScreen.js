@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Image, ScrollView, Modal } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary } from 'react-native-image-picker';
@@ -23,6 +23,9 @@ const EditProfileScreen = () => {
   const [profileDescription, setProfileDescription] = useState('');
   const [profileImage, setProfileImage] = useState(null);
   const [division, setDivision] = useState('');
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalMessage, setModalMessage] = useState('');
+  const [modalTitle, setModalTitle] = useState('');
 
   useEffect(() => {
     fetchUserProfile();
@@ -49,7 +52,9 @@ const EditProfileScreen = () => {
 
   const handleSavePress = async () => {
     if (newPassword && newPassword !== confirmPassword) {
-      alert('New password and confirm password do not match');
+      setModalTitle('Gagal');
+      setModalMessage('Kata sandi baru dan kata sandi konfirmasi tidak sama!');
+      setModalVisible(true);
       return;
     }
     try {
@@ -68,10 +73,14 @@ const EditProfileScreen = () => {
         await AsyncStorage.setItem('password', newPassword);
       }
 
-      alert('Profile updated successfully');
-      navigation.goBack();
+      setModalTitle('Berhasil');
+      setModalMessage('Profil berhasil diubah');
+      setModalVisible(true);
     } catch (error) {
       console.error('Error updating profile:', error);
+      setModalTitle('Gagal');
+      setModalMessage(error);
+      setModalVisible(true);
     }
   };
 
@@ -167,7 +176,7 @@ const EditProfileScreen = () => {
               style={tw`text-black flex-1`}
               value={email}
               onChangeText={setEmail}
-              placeholder="Enter Email"
+              placeholder="masukan email..."
             />
           </View>
         </View>
@@ -179,12 +188,12 @@ const EditProfileScreen = () => {
               style={tw`text-black flex-1`}
               value={username}
               onChangeText={setUsername}
-              placeholder="Enter Username"
+              placeholder="masukan username..."
             />
           </View>
         </View>
         <View style={tw`border-b border-gray-300 py-2`}>
-          <Text style={tw`text-gray-500`}>Current Password</Text>
+          <Text style={tw`text-gray-500`}>Kata sandi saat ini</Text>
           <View style={tw`flex-row items-center`}>
             <Icon name="lock-closed-outline" size={20} color="gray" style={tw`mr-3`} />
             <TextInput
@@ -192,7 +201,7 @@ const EditProfileScreen = () => {
               secureTextEntry={!isPasswordVisible}
               value={password}
               onChangeText={setPassword}
-              placeholder="Enter Current Password"
+              placeholder="masukan kata sandi saat ini..."
             />
             <TouchableOpacity onPress={togglePasswordVisibility}>
               <Icon name={isPasswordVisible ? "eye-off-outline" : "eye-outline"} size={20} color="gray" />
@@ -200,7 +209,7 @@ const EditProfileScreen = () => {
           </View>
         </View>
         <View style={tw`border-b border-gray-300 py-2`}>
-          <Text style={tw`text-gray-500`}>New Password</Text>
+          <Text style={tw`text-gray-500`}>Kata sandi baru</Text>
           <View style={tw`flex-row items-center`}>
             <Icon name="lock-closed-outline" size={20} color="gray" style={tw`mr-3`} />
             <TextInput
@@ -208,7 +217,7 @@ const EditProfileScreen = () => {
               secureTextEntry={!isNewPasswordVisible}
               value={newPassword}
               onChangeText={setNewPassword}
-              placeholder="Enter New Password"
+              placeholder="masukan kata sandi baru..."
             />
             <TouchableOpacity onPress={toggleNewPasswordVisibility}>
               <Icon name={isNewPasswordVisible ? "eye-off-outline" : "eye-outline"} size={20} color="gray" />
@@ -216,7 +225,7 @@ const EditProfileScreen = () => {
           </View>
         </View>
         <View style={tw`border-b border-gray-300 py-2`}>
-          <Text style={tw`text-gray-500`}>Confirm New Password</Text>
+          <Text style={tw`text-gray-500`}>Konfirmasi kata sandi</Text>
           <View style={tw`flex-row items-center`}>
             <Icon name="lock-closed-outline" size={20} color="gray" style={tw`mr-3`} />
             <TextInput
@@ -224,7 +233,7 @@ const EditProfileScreen = () => {
               secureTextEntry={!isConfirmPasswordVisible}
               value={confirmPassword}
               onChangeText={setConfirmPassword}
-              placeholder="Confirm New Password"
+              placeholder="masukan kata sandi konfirmasi..."
             />
             <TouchableOpacity onPress={toggleConfirmPasswordVisibility}>
               <Icon name={isConfirmPasswordVisible ? "eye-off-outline" : "eye-outline"} size={20} color="gray" />
@@ -232,6 +241,37 @@ const EditProfileScreen = () => {
           </View>
         </View>
       </View>
+      <Modal
+        transparent={true}
+        animationType="fade"
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={tw`flex-1 justify-center items-center bg-black bg-opacity-50`}>
+          <View style={tw`bg-white p-6 rounded-lg w-4/5 items-center`}>
+            <View style={tw`mb-4`}>
+              {modalTitle === 'Berhasil' ? (
+                <Icon name="checkmark-circle-outline" size={60} color="green" />
+              ) : (
+                <Icon name="alert-circle-outline" size={60} color="red" />
+              )}
+            </View>
+            <Text style={tw`text-lg font-bold mb-3 text-center`}>{modalTitle}</Text>
+            <Text style={tw`text-base mb-5 text-center text-gray-600`}>{modalMessage}</Text>
+            <TouchableOpacity
+              style={tw`bg-blue-600 p-3 rounded-lg w-full`}
+              onPress={() => {
+                setModalVisible(false);
+                if (modalTitle === 'Berhasil') {
+                  navigation.goBack();
+                }
+              }}
+            >
+              <Text style={tw`text-white text-base text-center`}>Tutup</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 };

@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, Linking, FlatList, Alert, Dimensions, ActivityIndicator, TextInput, Modal } from 'react-native';
+import { View, Text, Image, TouchableOpacity, ActivityIndicator, ScrollView, TextInput, Modal } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import Icon2 from 'react-native-vector-icons/MaterialCommunityIcons';
 import axios from 'axios';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Picker } from '@react-native-picker/picker';
+import tw from 'twrnc';
 import config from './config';
 import ResponseDialog from './ResponseDialog';
-import { Picker } from '@react-native-picker/picker';
 
 const defaultProfileImage = require('../assets/default-profile.png'); // Adjust the path as needed
-
-const { width } = Dimensions.get('window');
 
 const DetailDelegasi = () => {
   const navigation = useNavigation();
@@ -21,16 +21,17 @@ const DetailDelegasi = () => {
   const [loading, setLoading] = useState(true);
   const [responseDialogVisible, setResponseDialogVisible] = useState(false);
   const [userId, setUserId] = useState(null);
-  const [savingResponse, setSavingResponse] = useState(false);
   const [userRole, setUserRole] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
   const [rejectionReasonDialogVisible, setRejectionReasonDialogVisible] = useState(false);
-  const [isRejectionReasonVisible, setIsRejectionReasonVisible] = useState(false);
   const [divisions, setDivisions] = useState([]);
   const [selectedDivision, setSelectedDivision] = useState('');
   const [persons, setPersons] = useState([]);
   const [selectedPerson, setSelectedPerson] = useState('');
   const [changeHandlerDialogVisible, setChangeHandlerDialogVisible] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalMessage, setModalMessage] = useState('');
+  const [modalTitle, setModalTitle] = useState('');
 
   useEffect(() => {
     fetchEventDetails();
@@ -52,11 +53,15 @@ const DetailDelegasi = () => {
   const handleAccept = async () => {
     try {
       await axios.post(`${config.apiBaseUrl}/event/accept/${eventId}`);
-      Alert.alert('Success', 'Event accepted successfully!');
+      setModalTitle('Berhasil');
+      setModalMessage('Delegasi berhasil disetujui!');
+      setModalVisible(true);
       fetchEventDetails(); // Refresh event details
     } catch (error) {
       console.error('Error accepting event:', error);
-      Alert.alert('Error', 'Error accepting event');
+      setModalTitle('Gagal');
+      setModalMessage(error);
+      setModalVisible(true);
     }
   };
 
@@ -66,65 +71,89 @@ const DetailDelegasi = () => {
 
   const handleRejectionSubmit = async () => {
     try {
-      await axios.post(`${config.apiBaseUrl}/event/reject/${eventId}`, {
+      await axios.post(`${config.apiBaseUrl}/event/Ditolak/${eventId}`, {
         reason: rejectionReason
       });
-      Alert.alert('Success', 'Event rejected successfully!');
+      setModalTitle('Berhasil');
+      setModalMessage('Delegasi berhasil ditolak!');
+      setModalVisible(true);
       fetchEventDetails(); // Refresh event details
       setRejectionReasonDialogVisible(false); // Close rejection reason dialog
     } catch (error) {
       console.error('Error rejecting event:', error);
-      Alert.alert('Error', 'Error rejecting event');
+      setModalTitle('Gagal');
+      setModalMessage(error);
+      setModalVisible(true);
     }
   };
 
   const handleFixRejection = async () => {
     try {
       await axios.post(`${config.apiBaseUrl}/event/fix/${eventId}`);
-      Alert.alert('Success', 'Rejection fixed successfully!');
+      setModalTitle('Berhasil');
+      setModalMessage('Revisi berhasil diperbaiki!');
+      setModalVisible(true);
       setRejectionReason('');
       fetchEventDetails(); // Refresh event details
     } catch (error) {
       console.error('Error fixing rejection:', error);
-      Alert.alert('Error', 'Error fixing rejection');
+      setModalTitle('Gagal');
+      setModalMessage(error);
+      setModalVisible(true);
     }
   };
 
   const handleConfirmHandler = async () => {
     try {
       await axios.post(`${config.apiBaseUrl}/event/confirm/${eventId}`);
-      Alert.alert('Success', 'Event confirmed successfully!');
+      setModalTitle('Berhasil');
+      setModalMessage('Delegasi berhasil dikonfirmasi!');
+      setModalVisible(true);
       fetchEventDetails(); // Refresh event details
     } catch (error) {
       console.error('Error confirming event:', error);
-      Alert.alert('Error', 'Error confirming event');
+      setModalTitle('Gagal');
+      setModalMessage(error);
+      setModalVisible(true);
     }
   };
 
   const handleRejectHandler = async () => {
     try {
       await axios.post(`${config.apiBaseUrl}/event/reject-handler/${eventId}`);
-      Alert.alert('Success', 'Event rejected successfully!');
+      setModalTitle('Berhasil');
+      setModalMessage('Delegasi berhasil ditolak!');
+      setModalVisible(true);
       fetchEventDetails(); // Refresh event details
     } catch (error) {
       console.error('Error rejecting event:', error);
-      Alert.alert('Error', 'Error rejecting event');
+      setModalTitle('Gagal');
+      setModalMessage(error);
+      setModalVisible(true);
     }
   };
 
   const handleDisetujui = async () => {
     try {
       await axios.post(`${config.apiBaseUrl}/event/Disetujui/${eventId}`);
-      Alert.alert('Success', 'Disetujui!');
+      setModalTitle('Berhasil');
+      setModalMessage('Delegasi disetujui!');
+      setModalVisible(true);
       fetchEventDetails(); // Refresh event details
     } catch (error) {
       console.error('Error confirming event:', error);
-      Alert.alert('Error', 'Error confirming event');
+      setModalTitle('Gagal');
+      setModalMessage(error);
+      setModalVisible(true);
     }
   };
 
   const handleDitolak = async () => {
     setResponseDialogVisible(true);
+  };
+
+  const handleHandlerChange = async () => {
+    setChangeHandlerDialogVisible(true);
   };
 
   const fetchEventDetails = async () => {
@@ -182,14 +211,18 @@ const DetailDelegasi = () => {
       await axios.put(`${config.apiBaseUrl}/event/update-handler/${eventId}`, {
         toDivisionId: selectedDivision,
         toPersonId: selectedPerson,
-        status: 'Butuh Verifikasi Penerima'
+        status: 'Perlu Konfirmasi Penerima'
       });
-      Alert.alert('Success', 'Handler changed successfully!');
+      setModalTitle('Berhasil');
+      setModalMessage('Penerima berhasil diganti!');
+      setModalVisible(true);
       setChangeHandlerDialogVisible(false);
       fetchEventDetails(); // Refresh event details
     } catch (error) {
       console.error('Error changing handler:', error);
-      Alert.alert('Error', 'Error changing handler');
+      setModalTitle('Gagal');
+      setModalMessage(error);
+      setModalVisible(true);
     }
   };
 
@@ -206,123 +239,137 @@ const DetailDelegasi = () => {
     navigation.navigate('EditDelegasi', { eventId });
   };
 
-  const toggleRejectionReasonVisibility = () => {
-    setIsRejectionReasonVisible(!isRejectionReasonVisible);
+  const divisionColors = {
+    Supervisor: '#424F5E',
+    'Senior Officer': '#7954F6',
+    'Technical Officer': '#FFAE00',
+    'Field Officer': '#11D69F',
+    'Community Provider': '#663F70',
+    Internship: '#EE3862',
   };
 
   const renderHeader = () => (
-    <>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Icon name="arrow-back" size={24} color="#007AFF" />
+    <View style={tw`px-5`}>
+      <View style={tw`flex-row justify-between items-center py-5 bg-white`}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Icon name="close" size={24} color="#007AFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Detail Delegasi</Text>
+        <Text style={tw`text-lg font-bold text-blue-600`}>Detail Delegasi</Text>
         {userRole === 'admin' && eventDetails.status === 'Verifikasi Ditolak' && (
-          <TouchableOpacity onPress={handleEdit} style={styles.editButton}>
+          <TouchableOpacity onPress={handleEdit}>
             <Icon name="create-outline" size={24} color="#007AFF" />
           </TouchableOpacity>
         )}
       </View>
-      <View style={styles.headerContent}>
+
+      <View style={tw`flex-row items-center mb-3`}>
         <Image
           source={eventDetails.profileImageUrl ? { uri: `${config.apiBaseUrl}${eventDetails.profileImageUrl}` } : defaultProfileImage}
-          style={styles.profileImage}
+          style={tw`w-12 h-12 rounded-full mr-3`}
         />
-        <View>
-          <Text style={styles.to}>To: {eventDetails.toPerson?.username}</Text>
-          <Text style={styles.position}>{eventDetails.toPerson?.email}</Text>
-          <View style={styles.badgeContainer}>
-            <Text style={styles.badge}>{eventDetails.toDivision?.name}</Text>
-          </View>
+        <View style={tw`flex-1`}>
+          <Text style={tw`text-base text-blue-600 font-bold`}>Kepada: {eventDetails.toPerson?.username}</Text>
+          <Text style={tw`text-sm text-gray-500`}>{eventDetails.toPerson?.email}</Text>
+          <Text style={[tw`text-sm`, { color: divisionColors[eventDetails.toDivision?.name] || '#FFA500' }]}>
+            {eventDetails.toDivision?.name}
+          </Text>
         </View>
-        <Text style={styles.date}>{new Date(eventDetails.date).toLocaleDateString()}</Text>
+        <Text style={tw`text-xs text-gray-500 text-right`}>
+          {new Date(eventDetails.date).toLocaleDateString()}
+        </Text>
       </View>
-      {userRole === 'admin' && eventDetails.status === 'Penerima Menolak' && (
-        <TouchableOpacity
-          style={styles.changeHandlerButton}
-          onPress={() => setChangeHandlerDialogVisible(true)}
-        >
-          <Text style={styles.changeHandlerButtonText}>Change Handler</Text>
-        </TouchableOpacity>
+      {userRole === 'admin' && ['Penerima Menolak'].includes(eventDetails.status) && (
+        <View style={tw`flex-row justify-between mt-5`}>
+          <TouchableOpacity style={tw`bg-yellow-600 p-3 rounded-full flex-1 mr-2 items-center`} onPress={handleHandlerChange}>
+            <Text style={tw`text-white text-lg font-bold`}>Ubah Penerima</Text>
+          </TouchableOpacity>
+        </View>
       )}
-      <Text style={styles.title}>{eventDetails.title}</Text>
-      <Text style={styles.description}>{eventDetails.description}</Text>
+      <View style={tw`border-2 border-gray-200 my-3`} />
+
+      <Text style={tw`text-lg font-bold text-black mb-3`}>{eventDetails.title}</Text>
+
       {eventDetails.descriptionImageUrl && (
-        <Image source={{ uri: `${config.apiBaseUrl}${eventDetails.descriptionImageUrl}` }} style={styles.descriptionImage} />
+        <Image source={{ uri: `${config.apiBaseUrl}${eventDetails.descriptionImageUrl}` }} style={tw`w-full h-48 rounded-lg mb-5`} />
       )}
 
-      <View style={styles.fileContainer}>
+      <Text style={tw`text-base text-black mt-2 mb-5`}>{eventDetails.description}</Text>
+
+      <View style={tw`flex-row flex-wrap`}>
         {eventDetails.eventFileUrls && JSON.parse(eventDetails.eventFileUrls).map((file, index) => (
-          <TouchableOpacity key={index} style={styles.fileButton} onPress={() => handleFileOpen(file.url)}>
-            <Icon name="document-outline" size={24} color="red" />
-            <Text style={styles.fileText}>{file.originalName}</Text>
+          <TouchableOpacity key={index} style={tw`flex-row items-center p-2 m-1 border rounded-full`} onPress={() => handleFileOpen(file.url)}>
+            <Icon2 name="file-pdf-box" size={24} color="red" style={tw`mr-2`} />
+            <Text style={tw`text-black`} numberOfLines={1} ellipsizeMode="tail">
+              {file.originalName.length > 10 ? `${file.originalName.substring(0, 10)}...` : file.originalName}
+            </Text>
           </TouchableOpacity>
         ))}
       </View>
 
       {userRole === 'delegation_verificator' && ['Perlu Verifikasi'].includes(eventDetails.status) && (
-        <View style={styles.actionButtonsContainer}>
-          <TouchableOpacity style={styles.acceptButton} onPress={handleAccept}>
-            <Text style={styles.buttonText}>Accept</Text>
+        <View style={tw`flex-row justify-between mt-5`}>
+          <TouchableOpacity style={tw`bg-green-600 p-3 rounded-full flex-1 mr-2 items-center`} onPress={handleAccept}>
+            <Text style={tw`text-white text-lg font-bold`}>Disetujui</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.rejectButton} onPress={handleReject}>
-            <Text style={styles.buttonText}>Reject</Text>
+          <TouchableOpacity style={tw`bg-red-600 p-3 rounded-full flex-1 ml-2 items-center`} onPress={handleReject}>
+            <Text style={tw`text-white text-lg font-bold`}>Ditolak</Text>
           </TouchableOpacity>
         </View>
       )}
 
       {eventDetails.status === 'Verifikasi Ditolak' && (
-        <>
-          <View style={styles.rejectionReasonContainer}>
-            <Text style={styles.rejectionReasonTitle}>Rejection Reason:</Text>
-            <Text style={styles.rejectionReasonText}>{rejectionReason}</Text>
-            {userRole === 'admin' && (
-              <TouchableOpacity style={styles.checklistButton} onPress={handleFixRejection}>
-                <Icon name="checkmark-circle-outline" size={24} color="green" />
-              </TouchableOpacity>
-            )}
-          </View>
-        </>
+        <View style={tw`bg-red-100 p-4 rounded-lg mt-5 relative`}>
+          <Text style={tw`text-red-600 font-bold`}>Perbaikan:</Text>
+          <Text style={tw`text-red-600 mt-1`}>{rejectionReason}</Text>
+          {userRole === 'admin' && (
+            <TouchableOpacity style={tw`absolute top-2 right-2`} onPress={handleFixRejection}>
+              <Icon name="checkmark-circle-outline" size={24} color="green" />
+            </TouchableOpacity>
+          )}
+        </View>
       )}
 
-      {userRole === 'delegation_handler' && eventDetails.status === 'Butuh Verifikasi Penerima' && (
-        <View style={styles.actionButtonsContainer}>
-          <TouchableOpacity style={styles.confirmButton} onPress={handleConfirmHandler}>
-            <Text style={styles.buttonText}>Take</Text>
+      {userRole === 'delegation_handler' && eventDetails.status === 'Perlu Konfirmasi Penerima' && (
+        <View style={tw`flex-row justify-between mt-5`}>
+          <TouchableOpacity style={tw`bg-green-600 p-3 rounded-full flex-1 mr-2 items-center`} onPress={handleConfirmHandler}>
+            <Text style={tw`text-white text-lg font-bold`}>Ambil</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.rejectHandlerButton} onPress={handleRejectHandler}>
-            <Text style={styles.buttonText}>Deny</Text>
+          <TouchableOpacity style={tw`bg-red-600 p-3 rounded-full flex-1 ml-2 items-center`} onPress={handleRejectHandler}>
+            <Text style={tw`text-white text-lg font-bold`}>Tolak</Text>
           </TouchableOpacity>
         </View>
       )}
 
       {userRole === 'delegation_handler' && eventDetails.status === 'Penerima Setuju' && (
-        <TouchableOpacity style={styles.responseButton} onPress={() => setResponseDialogVisible(true)}>
+        <TouchableOpacity 
+        style={tw`flex-row justify-center items-center p-3 rounded-full border border-blue-600 my-5`} 
+        onPress={() => setResponseDialogVisible(true)}
+        >
           <Icon name="add-circle-outline" size={24} color="#007AFF" />
-          <Text style={styles.responseText}>Add Response</Text>
+          <Text style={tw`text-blue-600 text-lg font-bold ml-2`}>Buat Respon</Text>
         </TouchableOpacity>
       )}
 
       {userRole === 'delegation_handler' && eventDetails.status === 'Penerima Setuju' && (
-        <Text style={styles.sectionTitle}>Responses</Text>
+        <Text style={tw`text-lg font-bold text-black my-5`}>Respon</Text>
       )}
 
       {userRole === 'delegation_verificator' && eventDetails.status === 'Penerima Setuju' && (
-        <View style={styles.actionButtonsContainer}>
-          <TouchableOpacity style={styles.DitolakButton} onPress={handleDitolak}>
-            <Text style={styles.buttonText}>Ditolak</Text>
+        <View style={tw`flex-row justify-between mt-5`}>
+          <TouchableOpacity style={tw`bg-yellow-500 p-3 rounded-full flex-1 mr-2 items-center`} onPress={handleDitolak}>
+            <Text style={tw`text-white text-lg font-bold`}>Ditolak</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.DisetujuiButton} onPress={handleDisetujui}>
-            <Text style={styles.buttonText}>Disetujui</Text>
+          <TouchableOpacity style={tw`bg-green-600 p-3 rounded-full flex-1 ml-2 items-center`} onPress={handleDisetujui}>
+            <Text style={tw`text-white text-lg font-bold`}>Disetujui</Text>
           </TouchableOpacity>
         </View>
       )}
-    </>
+    </View>
   );
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={tw`flex-1 justify-center items-center`}>
         <ActivityIndicator size="large" color="#007AFF" />
         <Text>Loading...</Text>
       </View>
@@ -330,39 +377,27 @@ const DetailDelegasi = () => {
   }
 
   return (
-    <>
-      <FlatList
-        data={responses}
-        keyExtractor={(item) => item.id.toString()}
-        ListHeaderComponent={renderHeader}
-        renderItem={({ item }) => (
-          <View style={styles.responseContainer}>
-            <View style={styles.responseHeader}>
-              <Image
-                source={item.user?.profileImageUrl ? { uri: `${config.apiBaseUrl}${item.user.profileImageUrl}` } : defaultProfileImage}
-                style={styles.responseProfileImage}
-              />
-              <View>
-                <Text style={styles.responseFrom}>{item.user?.username || 'Unknown User'}</Text>
-                <Text style={styles.responseEmail}>From: {item.user?.email || 'Unknown Email'}</Text>
-              </View>
-            </View>
-            {item.responseImageUrl && (
-              <Image source={{ uri: `${config.apiBaseUrl}${item.responseImageUrl}` }} style={styles.responseImage} />
-            )}
-            <Text style={styles.responseDescription}>{item.responseText}</Text>
-            <View style={styles.responseFileContainer}>
-              {item.responseFileUrls && JSON.parse(item.responseFileUrls).map((file, index) => (
-                <TouchableOpacity key={index} style={styles.responseFileButton} onPress={() => handleFileOpen(file.url)}>
-                  <Icon name="document-outline" size={24} color="#007AFF" />
-                  <Text style={styles.responseFileText}>{file.originalName || '-'}</Text>
-                </TouchableOpacity>
-              ))}
+    <ScrollView style={tw`flex-1 bg-white`}>
+      {renderHeader()}
+
+      {responses.map((item, index) => (
+        <View key={index} style={tw`p-5 border-b border-gray-200`}>
+          <View style={tw`flex-row items-center`}>
+            <Image
+              source={item.user?.profileImageUrl ? { uri: `${config.apiBaseUrl}${item.user.profileImageUrl}` } : defaultProfileImage}
+              style={tw`w-10 h-10 rounded-full mr-3`}
+            />
+            <View>
+              <Text style={tw`text-base font-bold`}>{item.user?.username || 'Unknown User'}</Text>
+              <Text style={tw`text-sm text-gray-500`}>{item.user?.email || 'Unknown Email'}</Text>
             </View>
           </View>
-        )}
-        contentContainerStyle={styles.listContainer}
-      />
+          <Text style={tw`text-base text-black mt-2`}>{item.responseText}</Text>
+          {item.responseImageUrl && (
+            <Image source={{ uri: `${config.apiBaseUrl}${item.responseImageUrl}` }} style={tw`w-full h-40 rounded-lg mt-3`} />
+          )}
+        </View>
+      ))}
 
       {responseDialogVisible && (
         <ResponseDialog
@@ -374,40 +409,32 @@ const DetailDelegasi = () => {
         />
       )}
 
-      {rejectionReasonDialogVisible && (
-        <View style={styles.rejectionDialogContainer}>
-          <View style={styles.rejectionDialog}>
-            <Text style={styles.rejectionDialogTitle}>Rejection Reason</Text>
+      <Modal
+        visible={rejectionReasonDialogVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setRejectionReasonDialogVisible(false)}
+      >
+        <View style={tw`flex-1 justify-center items-center bg-black bg-opacity-50`}>
+          <View style={tw`bg-white p-5 rounded-lg w-4/5`}>
+            <Text style={tw`text-lg font-bold mb-3`}>Revisi</Text>
             <TextInput
-              style={styles.rejectionDialogInput}
-              placeholder="Enter reason for rejection"
+              style={tw`border border-gray-300 rounded-lg p-2 mb-4`}
+              placeholder="Perbaikan..."
               value={rejectionReason}
               onChangeText={setRejectionReason}
             />
-            <View style={styles.rejectionDialogButtons}>
-              <TouchableOpacity
-                style={[styles.dialogButton, styles.dialogCancelButton]}
-                onPress={() => setRejectionReasonDialogVisible(false)}
-              >
-                <Text style={styles.dialogButtonText}>Cancel</Text>
+            <View style={tw`flex-row justify-end`}>
+              <TouchableOpacity style={tw`bg-gray-400 p-3 rounded-lg mr-2`} onPress={() => setRejectionReasonDialogVisible(false)}>
+                <Text style={tw`text-white text-base`}>Batal</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.dialogButton, styles.dialogSubmitButton]}
-                onPress={handleRejectionSubmit}
-              >
-                <Text style={styles.dialogButtonText}>Submit</Text>
+              <TouchableOpacity style={tw`bg-blue-600 p-3 rounded-lg`} onPress={handleRejectionSubmit}>
+                <Text style={tw`text-white text-base`}>Kirim</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
-      )}
-
-      {savingResponse && (
-        <View style={styles.savingOverlay}>
-          <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.savingText}>Saving response...</Text>
-        </View>
-      )}
+      </Modal>
 
       <Modal
         visible={changeHandlerDialogVisible}
@@ -415,15 +442,15 @@ const DetailDelegasi = () => {
         animationType="slide"
         onRequestClose={() => setChangeHandlerDialogVisible(false)}
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Change Handler</Text>
+        <View style={tw`flex-1 justify-center items-center bg-black bg-opacity-50`}>
+          <View style={tw`bg-white p-5 rounded-lg w-4/5`}>
+            <Text style={tw`text-lg font-bold mb-3`}>Ubah Penerima</Text>
             <Picker
               selectedValue={selectedDivision}
               onValueChange={handleDivisionChange}
-              style={styles.picker}
+              style={tw`mb-4`}
             >
-              <Picker.Item label="Select Division" value="" />
+              <Picker.Item label="Pilih divisi" value="" />
               {divisions.map((division) => (
                 <Picker.Item key={division.id} label={division.name} value={division.id} />
               ))}
@@ -431,400 +458,52 @@ const DetailDelegasi = () => {
             <Picker
               selectedValue={selectedPerson}
               onValueChange={(itemValue) => setSelectedPerson(itemValue)}
-              style={styles.picker}
+              style={tw`mb-4`}
               enabled={selectedDivision !== ''}
             >
-              <Picker.Item label="Select Person" value="" />
+              <Picker.Item label="Pilih penerima" value="" />
               {persons.map((person) => (
                 <Picker.Item key={person.id} label={person.username} value={person.id} />
               ))}
             </Picker>
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.dialogButton, styles.dialogCancelButton]}
-                onPress={() => setChangeHandlerDialogVisible(false)}
-              >
-                <Text style={styles.dialogButtonText}>Cancel</Text>
+            <View style={tw`flex-row justify-end`}>
+              <TouchableOpacity style={tw`bg-gray-400 p-3 rounded-lg mr-2`} onPress={() => setChangeHandlerDialogVisible(false)}>
+                <Text style={tw`text-white text-base`}>Batal</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.dialogButton, styles.dialogSubmitButton]}
-                onPress={handleChangeHandlerSubmit}
-              >
-                <Text style={styles.dialogButtonText}>Save</Text>
+              <TouchableOpacity style={tw`bg-blue-600 p-3 rounded-lg`} onPress={handleChangeHandlerSubmit}>
+                <Text style={tw`text-white text-base`}>Simpan</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
-    </>
+
+      <Modal
+      transparent={true}
+      animationType="fade"
+      visible={modalVisible}
+      onRequestClose={() => setModalVisible(false)}
+    >
+      <View style={tw`flex-1 justify-center items-center bg-black bg-opacity-50`}>
+        <View style={tw`bg-white p-6 rounded-lg w-4/5 items-center`}>
+          <Icon name='checkmark-circle' size={50} color="#007AFF" style={tw`mb-4`} />
+          <Text style={tw`text-lg font-bold text-gray-800 mb-3 text-center`}>
+            {modalTitle}
+          </Text>
+          <Text style={tw`text-base text-gray-600 mb-5 text-center`}>
+            {modalMessage}
+          </Text>
+          <TouchableOpacity
+            style={tw`bg-blue-600 p-3 rounded-full w-full items-center`}
+            onPress={() => setModalVisible(false)}
+          >
+            <Text style={tw`text-white text-lg font-bold`}>Tutup</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+    </ScrollView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  listContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  backButton: {
-    paddingRight: 10,
-  },
-  editButton: {
-    paddingLeft: 10,
-  },
-  headerTitle: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#007AFF',
-  },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  profileImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 10,
-  },
-  name: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  position: {
-    fontSize: 14,
-    color: 'red',
-  },
-  to: {
-    fontSize: 14,
-    color: '#007AFF',
-  },
-  date: {
-    fontSize: 14,
-    color: '#000',
-    marginLeft: 'auto',
-  },
-  changeHandlerButton: {
-    backgroundColor: '#007AFF',
-    padding: 10,
-    borderRadius: 5,
-    alignSelf: 'center',
-    marginBottom: 20,
-  },
-  changeHandlerButtonText: {
-    color: '#fff',
-    fontSize: 16,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#000',
-    marginBottom: 10,
-  },
-  description: {
-    fontSize: 16,
-    marginBottom: 10,
-    padding: 10,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 5,
-  },
-  descriptionImage: {
-    width: width * 0.9,
-    height: 200,
-    marginBottom: 20,
-    alignSelf: 'center',
-    borderRadius: 5,
-  },
-  fileContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 20,
-  },
-  fileButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 10,
-    borderColor: '#007AFF',
-    borderWidth: 1,
-    borderRadius: 5,
-    marginRight: 10,
-    marginBottom: 10,
-  },
-  fileText: {
-    marginLeft: 10,
-    color: '#007AFF',
-  },
-  actionButtonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  acceptButton: {
-    backgroundColor: 'green',
-    padding: 10,
-    borderRadius: 5,
-    flex: 1,
-    marginRight: 10,
-    alignItems: 'center',
-  },
-  rejectButton: {
-    backgroundColor: 'red',
-    padding: 10,
-    borderRadius: 5,
-    flex: 1,
-    marginLeft: 10,
-    alignItems: 'center',
-  },
-  confirmButton: {
-    backgroundColor: 'green',
-    padding: 10,
-    borderRadius: 5,
-    flex: 1,
-    marginRight: 10,
-    alignItems: 'center',
-  },
-  rejectHandlerButton: {
-    backgroundColor: 'red',
-    padding: 10,
-    borderRadius: 5,
-    flex: 1,
-    marginLeft: 10,
-    alignItems: 'center',
-  },
-  fixButton: {
-    backgroundColor: 'orange',
-    padding: 10,
-    borderRadius: 5,
-    marginTop: 10,
-    alignItems: 'center',
-  },
-  DitolakButton: {
-    backgroundColor: 'yellow',
-    padding: 10,
-    borderRadius: 5,
-    flex: 1,
-    marginRight: 10,
-    alignItems: 'center',
-  },
-  DisetujuiButton: {
-    backgroundColor: 'green',
-    padding: 10,
-    borderRadius: 5,
-    flex: 1,
-    marginLeft: 10,
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: 'white',
-    fontSize: 16,
-  },
-  responseButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 15,
-    borderColor: '#007AFF',
-    borderWidth: 1,
-    borderRadius: 5,
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  badgeContainer: {
-    flexDirection: 'row',
-    marginTop: 5,
-  },
-  badge: {
-    backgroundColor: '#002D7A',
-    color: 'white',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginRight: 5,
-  },
-  responseText: {
-    marginLeft: 10,
-    color: '#007AFF',
-    fontSize: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginVertical: 20,
-  },
-  responseContainer: {
-    marginBottom: 20,
-    padding: 10,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 5,
-  },
-  responseHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  responseProfileImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 10,
-  },
-  responseFrom: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  responseEmail: {
-    fontSize: 14,
-    color: '#007AFF',
-  },
-  responseDescription: {
-    fontSize: 14,
-    marginBottom: 10,
-  },
-  responseImage: {
-    width: width * 0.9,
-    height: 200,
-    marginBottom: 10,
-    alignSelf: 'center',
-    borderRadius: 5,
-  },
-  responseFileContainer: {
-    flexDirection: 'column',
-  },
-  responseFileButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  responseFileText: {
-    marginLeft: 10,
-    color: '#007AFF',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  savingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  savingText: {
-    marginTop: 10,
-    color: '#fff',
-    fontSize: 16,
-  },
-  rejectionReasonContainer: {
-    marginBottom: 20,
-    padding: 10,
-    backgroundColor: '#ffe6e6',
-    borderRadius: 5,
-    position: 'relative',
-  },
-  rejectionReasonTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 5,
-    color: '#ff0000',
-  },
-  rejectionReasonText: {
-    fontSize: 16,
-    color: '#ff0000',
-  },
-  checklistButton: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-  },
-  rejectionDialogContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  rejectionDialog: {
-    backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 10,
-    width: '80%',
-  },
-  rejectionDialogTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  rejectionDialogInput: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 5,
-    padding: 10,
-    marginBottom: 20,
-    fontSize: 16,
-  },
-  rejectionDialogButtons: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-  },
-  dialogButton: {
-    padding: 10,
-    borderRadius: 5,
-    marginLeft: 10,
-  },
-  dialogCancelButton: {
-    backgroundColor: '#ccc',
-  },
-  dialogSubmitButton: {
-    backgroundColor: '#007AFF',
-  },
-  dialogButtonText: {
-    color: '#fff',
-    fontSize: 16,
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 10,
-    width: '80%',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 20,
-  },
-  picker: {
-    height: 50,
-    width: '100%',
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 20,
-  },
-});
 
 export default DetailDelegasi;

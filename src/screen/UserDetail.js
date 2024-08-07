@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Image } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Image, Modal } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import axios from 'axios';
 import config from './config'; // Import the configuration
@@ -11,6 +11,9 @@ const UserDetail = ({ route, navigation }) => {
     const { userId } = route.params;
     const [user, setUser] = useState(null);
     const [role, setRole] = useState('');
+    const [modalVisible, setModalVisible] = useState(false);
+    const [modalTitle, setModalTitle] = useState('');
+    const [modalMessage, setModalMessage] = useState('');
 
     useEffect(() => {
         fetchUserDetails();
@@ -30,12 +33,17 @@ const UserDetail = ({ route, navigation }) => {
     const handleSave = async () => {
         try {
             await axios.put(`${config.apiBaseUrl}/user/${userId}`, { role });
-            Alert.alert('Success', 'User role updated successfully');
-            navigation.goBack();
+            showModal('Berhasil', 'Peran pengguna berhasil diperbarui');
         } catch (error) {
             console.error('Error updating user role:', error);
-            Alert.alert('Error', 'Failed to update user role');
+            showModal('Error', 'Gagal memperbarui peran pengguna');
         }
+    };
+
+    const showModal = (title, message) => {
+        setModalTitle(title);
+        setModalMessage(message);
+        setModalVisible(true);
     };
 
     const divisionColors = {
@@ -45,7 +53,7 @@ const UserDetail = ({ route, navigation }) => {
         'Field Officer': '#11D69F',
         'Community Provider': '#663F70',
         Internship: '#EE3862',
-      };
+    };
 
     if (!user) {
         return (
@@ -107,6 +115,41 @@ const UserDetail = ({ route, navigation }) => {
                     </View>
                 </View>
             </View>
+            <Modal
+                transparent={true}
+                animationType="fade"
+                visible={modalVisible}
+                onRequestClose={() => {
+                    setModalVisible(false);
+                    if (modalTitle === 'Berhasil') {
+                        navigation.goBack();
+                    }
+                }}
+            >
+                <View style={tw`flex-1 justify-center items-center bg-black bg-opacity-50`}>
+                    <View style={tw`bg-white p-5 rounded-lg w-4/5 items-center`}>
+                        <Icon
+                            name={modalTitle === 'Error' ? "alert-circle-outline" : "checkmark-circle-outline"}
+                            size={50}
+                            color={modalTitle === 'Error' ? "red" : "green"}
+                            style={tw`mb-3`}
+                        />
+                        <Text style={tw`text-lg font-bold mb-3 text-center`}>{modalTitle}</Text>
+                        <Text style={tw`text-base mb-5 text-center text-gray-600`}>{modalMessage}</Text>
+                        <TouchableOpacity
+                            style={tw`bg-blue-600 p-3 rounded-lg w-full`}
+                            onPress={() => {
+                                setModalVisible(false);
+                                if (modalTitle === 'Berhasil') {
+                                    navigation.goBack();
+                                }
+                            }}
+                        >
+                            <Text style={tw`text-white text-base text-center`}>Tutup</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </ScrollView>
     );
 };

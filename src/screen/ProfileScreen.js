@@ -108,7 +108,7 @@ const ProfileScreen = () => {
                   style={tw`w-24 h-24 rounded-full mb-3`}
               />
               <Text style={tw`text-white text-2xl font-bold mb-4`}>{username}</Text>
-              <Text style={tw`text-white text-center text-sm px-4`}>{profileDescription}</Text>
+              <Text style={tw`text-white text-center text-sm px-4 mx-10`}>{profileDescription}</Text>
           </View>
       </LinearGradient>
       <View style={tw`p-5`}>

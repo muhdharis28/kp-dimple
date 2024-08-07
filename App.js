@@ -64,13 +64,13 @@ const App = () => {
       <Stack.Navigator>
         {isLoggedIn ? (
           <>
+            <Stack.Screen name="Dashboard" component={DashboardScreen} options={{ headerShown: false }} />
             <Stack.Screen name="ListUser" component={ListUser} options={{ headerShown: false }} />
             <Stack.Screen name="UserDetail" component={UserDetail} options={{ headerShown: false }} />
             <Stack.Screen name="Profile" component={ProfileScreen} options={{ headerShown: false }} />
             <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
             <Stack.Screen name='Signup' component={SignupScreen} options={{ headerShown: false }} />
-            <Stack.Screen name="Dashboard" component={DashboardScreen} options={{ headerShown: false }} />
             <Stack.Screen name="CreateDelegasi" component={CreateDelegasi} options={{ headerShown: false }} />
             <Stack.Screen name="DetailDelegasi" component={DetailDelegasi} options={{ headerShown: false }} />
             <Stack.Screen name="EditDelegasi" component={EditDelegasi} options={{ headerShown: false }} />

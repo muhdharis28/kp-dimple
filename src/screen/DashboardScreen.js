@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TextInput, FlatList, TouchableOpacity, Image, Alert, ScrollView } from 'react-native';
+import { View, Text, TextInput, FlatList, TouchableOpacity, Image, Modal, ScrollView } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -7,6 +7,7 @@ import axios from 'axios';
 import { Menu, MenuItem } from 'react-native-material-menu';
 import config from './config'; // Import the configuration
 import tw from 'twrnc';
+import LinearGradient from 'react-native-linear-gradient';
 
 const defaultProfileImage = require('../assets/default-profile.png'); // Adjust the path as needed
 const appLogo = require('../assets/Logo_Dimple.png'); // Add your app logo here
@@ -21,6 +22,8 @@ const DashboardScreen = () => {
   const [role, setRole] = useState('');
   const [email, setEmail] = useState('');
   const menuRef = useRef(null);
+  const [isModalVisible, setModalVisible] = useState(false);
+  const [selectedEventId, setSelectedEventId] = useState(null);
 
   const showMenu = () => {
     if (menuRef.current) {
@@ -56,6 +59,7 @@ const DashboardScreen = () => {
   useFocusEffect(
     React.useCallback(() => {
       fetchUserProfile().then(() => fetchEvents());
+      filterEvents()
     }, [])
   );
 
@@ -94,27 +98,47 @@ const DashboardScreen = () => {
   };
 
   const confirmDelete = (eventId) => {
-    Alert.alert(
-      "Confirm Delete",
-      "Are you sure you want to delete this event?",
-      [
-        {
-          text: "Cancel",
-          style: "cancel"
-        },
-        {
-          text: "Delete",
-          onPress: () => handleDelete(eventId),
-          style: "destructive"
-        }
-      ]
+    setSelectedEventId(eventId);
+    setModalVisible(true);
+  };
+
+  const CustomConfirmDeleteModal = ({ visible, onConfirm, onCancel }) => {
+    return (
+      <Modal
+        transparent={true}
+        visible={visible}
+        animationType="fade"
+        onRequestClose={onCancel}
+      >
+        <View style={tw`flex-1 justify-center items-center bg-black bg-opacity-50`}>
+          <View style={tw`bg-white rounded-lg p-5 w-4/5`}>
+            <Text style={tw`text-lg font-bold text-center mb-3`}>Hapus Delegasi</Text>
+            <Text style={tw`text-center text-base text-gray-700 mb-5`}>Apakah kamu yakin ingin menghapus delegasi ini?</Text>
+            <View style={tw`flex-row justify-around`}>
+              <TouchableOpacity
+                onPress={onCancel}
+                style={tw`bg-gray-300 px-4 py-2 rounded-full`}
+              >
+                <Text style={tw`text-gray-700 text-base`}>Tidak</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={onConfirm}
+                style={tw`bg-red-600 px-4 py-2 rounded-full`}
+              >
+                <Text style={tw`text-white text-base`}>Hapus</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     );
   };
 
-  const handleDelete = async (eventId) => {
+  const handleDelete = async() => {
     try {
-      await axios.delete(`${config.apiBaseUrl}/event/${eventId}`);
-      fetchEvents(); // Refresh the events list after deletion
+      await axios.delete(`${config.apiBaseUrl}/event/${selectedEventId}`);
+      setModalVisible(false);
+      fetchEvents();
     } catch (error) {
       console.error('Error deleting event:', error);
     }
@@ -154,7 +178,7 @@ const DashboardScreen = () => {
         break;
       case 'Proses':
         filtered = eventsToFilter.filter(event =>
-          ['Butuh Verifikasi Penerima', 'Penerima Setuju', 'Penerima Menolak', 'Ditolak'].includes(event.status) &&
+          ['Perlu Konfirmasi Penerima', 'Penerima Setuju', 'Penerima Menolak', 'Ditolak'].includes(event.status) &&
           (role !== 'delegation_handler' || event.toPerson.email === email || event.userId === email)
         );
         break;
@@ -183,6 +207,16 @@ const DashboardScreen = () => {
     Internship: '#EE3862',
   };
 
+  const statusStyles = {
+    'Perlu Verifikasi': { color: '#F7DF1E' },
+    'Verifikasi Ditolak': { gradient: ['#F7DF1E', '#CF0A0A'] },
+    'Disetujui': { color: '#0ACF83' },
+    'Ditolak': { color: '#CF0A0A' },
+    'Perlu Konfirmasi Penerima': { gradient: ['#2298F2', '#F7DF1E'] },
+    'Penerima Setuju': { color: '#2298F2' },
+    'Penerima Menolak': { gradient: ['#2298F2', '#CF0A0A'] },
+  };
+
   const renderEventItem = ({ item }) => (
     <TouchableOpacity onPress={() => handleEventPress(item.id)} style={tw`flex-row items-center py-3 border-b border-gray-300`}>
       <Image
@@ -202,12 +236,31 @@ const DashboardScreen = () => {
           </View>
           <Text style={tw`text-xs text-gray-500`}>{new Date(item.date).toLocaleDateString()}</Text>
         </View>
-        <Text style={tw`text-sm text-gray-400 mb-2`}>{item.description}</Text>
+        <Text style={tw`text-sm text-gray-400 mb-2`} numberOfLines={3} ellipsizeMode="tail">{item.description}</Text>
         <View style={tw`flex-row justify-between items-center w-full`}>
-          <Text style={tw`bg-[#002D7A] text-white text-xs px-2 py-1 rounded-full`}>{item.status}</Text>
+          {statusStyles[item.status]?.gradient ? (
+            <LinearGradient
+              colors={statusStyles[item.status].gradient}
+              start={{ x: 0, y: 0 }} // Horizontal start point
+              end={{ x: 1, y: 0 }} // Horizontal end point
+              style={tw`flex-row items-center px-2 py-1 rounded-full`}
+            >
+              <Text style={tw`text-white text-xs`}>{item.status}</Text>
+            </LinearGradient>
+          ) : (
+            <View style={[tw`flex-row items-center px-2 py-1 rounded-full`, { backgroundColor: statusStyles[item.status]?.color }]}>
+              <Text style={tw`text-white text-xs`}>{item.status}</Text>
+            </View>
+          )}
           <TouchableOpacity onPress={() => confirmDelete(item.id)} style={tw`p-2`}>
             <Icon name="trash" size={20} color="#FF3B30" />
           </TouchableOpacity>
+
+          <CustomConfirmDeleteModal
+            visible={isModalVisible}
+            onConfirm={handleDelete}
+            onCancel={() => setModalVisible(false)}
+          />
         </View>
       </View>
     </TouchableOpacity>
