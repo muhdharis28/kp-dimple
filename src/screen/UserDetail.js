@@ -67,9 +67,9 @@ const UserDetail = ({ route, navigation }) => {
         <ScrollView style={tw`flex-1 bg-white`}>
             <LinearGradient 
                 colors={['#002D7A', '#0052D4']}
-                style={tw`rounded-b-[200px] pb-10 pt-8 items-center relative`}
+                style={tw`-mx-8 rounded-b-[200px] pb-12 pt-8 items-center relative`}
             >
-                <View style={tw`flex-row justify-between items-center px-5 w-full`}>
+                <View style={tw`flex-row justify-between items-center px-13 w-full`}>
                     <TouchableOpacity onPress={() => navigation.goBack()}>
                         <Icon name="arrow-back" size={24} color="#fff" />
                     </TouchableOpacity>
@@ -97,7 +97,7 @@ const UserDetail = ({ route, navigation }) => {
                     <View style={tw`flex-row items-center mb-2`}>
                         <Icon name="briefcase" size={20} color="grey" style={tw`mr-3`} />
                         <Text style={tw`text-base ml-2`}>Divisi</Text>
-                        <Text style={[tw`text-base ml-auto`,{ color: divisionColors[user.division.name] || '#000' }]}>{user.division ? user.division.name : 'N/A'}</Text>
+                        <Text style={[tw`text-base ml-auto`,{ color: divisionColors[user.division ? user.division.name : 'N/A'] || '#000' }]}>{user.division ? user.division.name : 'N/A'}</Text>
                     </View>
                     <View style={tw`flex-row items-center mb-2`}>
                         <Icon name="person" size={20} color="grey" style={tw`mr-3`} />

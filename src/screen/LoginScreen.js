@@ -49,15 +49,24 @@ const LoginScreen = () => {
         password: value.password
       });
 
-      await AsyncStorage.setItem('password', value.password);
-      await AsyncStorage.setItem('email', value.email);
-      await AsyncStorage.setItem('username', response.data.data.username);
-      await AsyncStorage.setItem('role', response.data.data.role);  // Save the role
-      await AsyncStorage.setItem('userId', JSON.stringify(response.data.data.id));  // Save the role
-
-      await setItem('DUMMY TOKEN');
-      setIsLoggedIn(true);
-      navigation.replace('Dashboard');
+      if (response.data.data.role === null) {
+        Dialog.show({
+          type: ALERT_TYPE.WARNING,
+          title: 'Warning',
+          textBody: 'Peran belum disetting, silahkan hubungi admin',
+          button: 'Close'
+        });
+      } else {
+        await AsyncStorage.setItem('password', value.password);
+        await AsyncStorage.setItem('email', value.email);
+        await AsyncStorage.setItem('username', response.data.data.username);
+        await AsyncStorage.setItem('role', response.data.data.role);  // Save the role
+        await AsyncStorage.setItem('userId', JSON.stringify(response.data.data.id));  // Save the role
+  
+        await setItem('DUMMY TOKEN');
+        setIsLoggedIn(true);
+        navigation.replace('Dashboard');
+      }
     } catch (error) {
       console.log('Error:', error);
 

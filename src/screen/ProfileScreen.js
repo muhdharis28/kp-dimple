@@ -18,6 +18,7 @@ const ProfileScreen = () => {
   const [username, setUsername] = useState('');
   const [division, setDivision] = useState('');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState('');
   const [profileDescription, setProfileDescription] = useState('');
   const [profileImage, setProfileImage] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -36,12 +37,13 @@ const ProfileScreen = () => {
       const response = await axios.get(`${config.apiBaseUrl}/user/profile`, {
         params: { email: asyncEmail }
       });
-      const { username, email, description, profileImageUrl, division } = response.data.data;
+      const { username, email, description, profileImageUrl, division, role } = response.data.data;
       setUsername(username);
       setEmail(email);
       setDivision(division);
       setPassword(asyncPassword);
       setProfileDescription(description);
+      setRole(role);
       setProfileImage(profileImageUrl ? { uri: `${config.apiBaseUrl}${profileImageUrl}` } : defaultProfileImage);
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -65,10 +67,19 @@ const ProfileScreen = () => {
   const handleLogout = async () => {
     try {
       await AsyncStorage.clear();
-      navigation.replace('Login');
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
     } catch (error) {
       console.error('Error logging out:', error);
     }
+  };
+
+  const roleMapping = {
+    admin: 'Admin',
+    delegation_verificator: 'Verifikator',
+    delegation_handler: 'Penerima',
   };
 
   if (loading) {
@@ -91,9 +102,9 @@ const ProfileScreen = () => {
     <ScrollView style={tw`flex-1 bg-white`}>
       <LinearGradient 
           colors={['#002D7A', '#0052D4']}
-          style={tw`rounded-b-[200px] pb-10 pt-8 items-center relative`}
+          style={tw`-mx-8 rounded-b-[200px] pb-16 pt-8 items-center relative`}
       >
-          <View style={tw`flex-row justify-between items-center px-5 w-full`}>
+          <View style={tw`flex-row justify-between items-center px-13 w-full`}>
               <TouchableOpacity onPress={() => navigation.goBack()}>
                   <Icon name="arrow-back" size={24} color="#fff" />
               </TouchableOpacity>
@@ -128,7 +139,9 @@ const ProfileScreen = () => {
         <View style={tw`flex-row items-center mb-2 mx-5`}>
           <Icon name="person-outline" size={20} color="gray" style={tw`mr-3`} />
           <Text style={tw`text-sm text-gray-500`}>Peran</Text>
-          <Text style={tw`text-sm text-black ml-auto`}>Admin</Text>
+          <Text style={tw`text-sm text-black ml-auto`}>
+            {roleMapping[role] || 'Unknown Role'}
+          </Text>
         </View>
         <View style={tw`border-b border-gray-300 mb-5 mx-5`}/>
         <View style={tw`flex-row items-center mb-2 mx-5`}>

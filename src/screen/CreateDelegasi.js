@@ -282,6 +282,7 @@ const CreateDelegasi = () => {
       borderRadius: 40,
       minWidth: 0,
       height: 0,
+      opacity: 0
     },
     menuItem: {
       justifyContent: 'center',
@@ -291,8 +292,13 @@ const CreateDelegasi = () => {
       marginVertical: 5,
     },
     iconStyle: {
-      color: '#2563EB',
-    },
+      color: '#2563EB', 
+    }, iconContainer: {
+    borderWidth: 2, // Border around the icon
+    borderColor: '#2563EB', // Blue border color
+    borderRadius: 20, // Circular border
+    padding: 5, // Space between icon and border
+  },
   });
 
   return (
@@ -436,7 +442,7 @@ const CreateDelegasi = () => {
             ))}
           </View>
 
-        <TouchableOpacity onPress={handleSubmit} style={tw`bg-blue-600 p-3 rounded-full items-center mt-10 mb-10 mx-10`}>
+        <TouchableOpacity onPress={handleSubmit} style={tw`bg-blue-600 p-2 rounded-full items-center mt-10 mb-10 mx-20`}>
           <Text style={tw`text-white text-lg font-bold`}>Kirim</Text>
         </TouchableOpacity>
 

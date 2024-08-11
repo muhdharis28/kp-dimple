@@ -52,9 +52,6 @@ const EditDelegasi = () => {
   try {
     const response = await axios.get(`${config.apiBaseUrl}/event/${eventId}`);
     const event = response.data.data;
-    
-    // Check if eventFileUrls exist and is an array
-    const eventFiles = event.eventFileUrls ? JSON.parse(event.eventFileUrls) : [];
 
     setEventDetails(event);
     setFormData({
@@ -64,8 +61,6 @@ const EditDelegasi = () => {
       description: event.description || '',
     });
     setDate(new Date(event.date));
-    setDescriptionImage(event.descriptionImageUrl ? { uri: `${config.apiBaseUrl}${event.descriptionImageUrl}` } : null);
-    setEventFiles(eventFiles);
   } catch (error) {
     console.error('Error fetching event details:', error);
   }
@@ -134,14 +129,13 @@ const EditDelegasi = () => {
   };
 
   const uploadDescriptionImage = async () => {
-    if (descriptionImage && descriptionImage.uri) {
-      console.log(descriptionImage)
+    if (descriptionImage) {
       const formData = new FormData();
       const filename = descriptionImage.uri.split('/').pop();
       const match = /\.(\w+)$/.exec(filename);
       const type = match ? `image/${match[1]}` : `image`;
-      console.log('aaaaa', filename)
       formData.append('descriptionImageUrl', { uri: descriptionImage.uri, name: filename, type });
+
       try {
         const response = await axios.post(`${config.apiBaseUrl}/event/upload-description-image`, formData, {
           headers: {
@@ -154,17 +148,16 @@ const EditDelegasi = () => {
         throw error;
       }
     }
-    return eventDetails.descriptionImageUrl;
+    return null;
   };
 
   const uploadEventFiles = async () => {
     if (eventFiles.length > 0) {
       const formData = new FormData();
-      console.log(eventFiles)
-      eventFiles.forEach((file, index) => {
+      eventFiles.forEach((file) => {
         formData.append('eventFiles', {
           uri: file.uri,
-          name: file.originalName || file.name,
+          name: file.name,
           type: file.type,
         });
       });
@@ -188,20 +181,12 @@ const EditDelegasi = () => {
     setLoading(true);
     try {
       const descriptionImageUrl = await uploadDescriptionImage();
-      const newEventFileUrls = await uploadEventFiles();
-      const combinedFiles = [
-        ...eventFiles,
-        ...newEventFileUrls.map(file => ({
-          originalName: file.originalname,
-          url: file.url,
-          mimeType: file.mimetype
-        }))
-      ];
+      const eventFileUrls = await uploadEventFiles();
 
       const eventFormData = {
         ...formData,
         descriptionImageUrl,
-        eventFileUrls: JSON.stringify(combinedFiles),
+        eventFileUrls: JSON.stringify(eventFileUrls),
         date: date.toISOString()
       };
       await axios.put(`${config.apiBaseUrl}/event/update/${eventId}`, eventFormData, {
@@ -265,6 +250,13 @@ const EditDelegasi = () => {
 
   return (
     <ScrollView style={tw`flex-1 bg-white`}>
+      {/* Note Banner */}
+      <View style={[tw`bg-yellow-300 p-3`, { borderBottomWidth: 1, borderBottomColor: '#FFA000' }]}>
+        <Text style={tw`text-black text-center font-bold`}>
+          Catatan: Pastikan untuk mengunggah ulang file dan gambar saat menyimpan data.
+        </Text>
+      </View>
+
       <View style={tw`flex-row justify-between items-center px-5 py-5 bg-white`}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={tw`text-lg font-bold text-gray-600`}>
@@ -376,35 +368,35 @@ const EditDelegasi = () => {
           multiline
         />
 
-        <View style={tw`flex-row flex-wrap`}>
-          {eventFiles.map((file, index) => (
-            <View
-              key={index}
-              style={[
-                tw`flex-row items-center p-2 m-1 border rounded-full`,
-                { borderColor: '#000' },
-              ]}
-            >
-              <Icon2
-                name="file-pdf-box"
-                size={24}
-                color="red"
-                style={tw`mr-2`}
-              />
-              <Text style={tw`text-black`} numberOfLines={1} ellipsizeMode="tail">
-                {file.originalName.length > 10
-                  ? `${file.originalName.substring(0, 10)}...`
-                  : file.originalNamee}
-              </Text>
-              <TouchableOpacity onPress={() => removeFile(index)} style={tw`ml-2`}>
-                <Icon name="close" size={16} color="black" />
-              </TouchableOpacity>
-            </View>
-          ))}
-        </View>
+          <View style={tw`flex-row flex-wrap`}>
+            {eventFiles.map((file, index) => (
+              <View
+                key={index}
+                style={[
+                  tw`flex-row items-center p-2 m-1 border rounded-full`,
+                  { borderColor: '#000' },
+                ]}
+              >
+                <Icon2
+                  name="file-pdf-box"
+                  size={24}
+                  color="red"
+                  style={tw`mr-2`}
+                />
+                <Text style={tw`text-black`} numberOfLines={1} ellipsizeMode="tail">
+                  {file.name.length > 10
+                    ? `${file.name.substring(0, 10)}...`
+                    : file.name}
+                </Text>
+                <TouchableOpacity onPress={() => removeFile(index)} style={tw`ml-2`}>
+                  <Icon name="close" size={16} color="black" />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
 
         <TouchableOpacity onPress={handleSave} style={tw`bg-blue-600 p-3 rounded-full items-center mt-10 mb-10 mx-10`}>
-          <Text style={tw`text-white text-lg font-bold`}>Save</Text>
+          <Text style={tw`text-white text-lg font-bold`}>Simpan</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>

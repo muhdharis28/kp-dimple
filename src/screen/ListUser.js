@@ -21,7 +21,6 @@ const ListUser = () => {
     try {
       const response = await axios.get(`${config.apiBaseUrl}/user/list`);
       setUsers(response.data.data);
-      console.log(response.data.data[0].division.name)
     } catch (error) {
       console.error('Error fetching users:', error);
     }
@@ -67,11 +66,11 @@ const ListUser = () => {
         <Text style={tw`text-xl font-bold text-[#002D7A]`}>Daftar Pengguna</Text>
       </View>
       <View style={tw`flex-row items-center bg-[#002D7A] rounded-full mx-4 mb-4`}>
-        <Icon name="search" size={25} color="white" style={tw`ml-2`} />
+        <Icon name="search" size={20} color="white" style={tw`ml-4`} />
         <TextInput
           placeholder="Cari..."
           placeholderTextColor="white"
-          style={tw`flex-1 text-lg text-white ml-2`}
+          style={tw`flex-1 text-sm text-white ml-2`}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />

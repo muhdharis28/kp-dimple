@@ -89,7 +89,7 @@ const SignupScreen = () => {
         password: value.password,
         divisionName: value.division
       });
-
+      console.log('sdsadsadas', value.division)
       Dialog.show({
         type: ALERT_TYPE.SUCCESS,
         title: 'Success',

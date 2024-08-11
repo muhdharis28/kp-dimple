@@ -178,7 +178,7 @@ const DashboardScreen = () => {
         break;
       case 'Proses':
         filtered = eventsToFilter.filter(event =>
-          ['Perlu Konfirmasi Penerima', 'Penerima Setuju', 'Penerima Menolak', 'Ditolak'].includes(event.status) &&
+          ['Perlu Konfirmasi Penerima', 'Penerima Setuju', 'Ditolak'].includes(event.status) &&
           (role !== 'delegation_handler' || event.toPerson.email === email || event.userId === email)
         );
         break;
@@ -214,7 +214,6 @@ const DashboardScreen = () => {
     'Ditolak': { color: '#CF0A0A' },
     'Perlu Konfirmasi Penerima': { gradient: ['#2298F2', '#F7DF1E'] },
     'Penerima Setuju': { color: '#2298F2' },
-    'Penerima Menolak': { gradient: ['#2298F2', '#CF0A0A'] },
   };
 
   const renderEventItem = ({ item }) => (
@@ -291,12 +290,12 @@ const DashboardScreen = () => {
         )}
       </View>
 
-      <View style={tw`flex-row items-center self-center bg-[#002D7A] rounded-full mb-5 h-12 w-full px-5`}>
-        <Icon name="search" size={25} color="white" style={tw`mr-2`} />
+      <View style={tw`flex-row items-center self-center bg-[#002D7A] rounded-full mb-5 h-10 w-full px-5`}>
+        <Icon name="search" size={20} color="white" style={tw`mr-2`} />
         <TextInput
           placeholder="Cari..."
           placeholderTextColor="white"
-          style={tw`flex-1 text-lg text-white`}
+          style={tw`flex-1 text-sm text-white`}
           value={searchQuery}
           onChangeText={handleSearch}
         />
@@ -335,6 +334,12 @@ const DashboardScreen = () => {
         data={filteredEvents}
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderEventItem}
+        ListEmptyComponent={
+          <View style={tw`flex-1 justify-center items-center`}>
+            <Text style={tw`text-gray-500 text-lg`}>Belum ada delegasi</Text>
+          </View>
+        }
+        contentContainerStyle={filteredEvents.length === 0 && tw`flex-1 justify-center`}
       />
 
       {role === 'admin' && (

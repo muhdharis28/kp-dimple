@@ -7,7 +7,7 @@ import axios from 'axios';
 import tw from 'twrnc';
 import config from './config';
 
-const ResponseDialog = ({ visible, onClose, eventId, userId, onResponseSaved }) => {
+const ResponseDialog = ({ visible, onClose, eventId, userId, onResponseSaved, userRole }) => {
   const [responseText, setResponseText] = useState('');
   const [responseImage, setResponseImage] = useState(null);
   const [responseFiles, setResponseFiles] = useState([]);
@@ -78,13 +78,13 @@ const ResponseDialog = ({ visible, onClose, eventId, userId, onResponseSaved }) 
     try {
       const responseImageUrl = await uploadResponseImage();
       const responseFileUrls = await uploadResponseFiles();
-      
       const responseFormData = {
         responseText,
         responseImageUrl,
         responseFileUrls: JSON.stringify(responseFileUrls),
         eventId,
         userId,
+        userRole
       };
 
       await axios.post(`${config.apiBaseUrl}/response/create`, responseFormData, {
@@ -166,42 +166,45 @@ const ResponseDialog = ({ visible, onClose, eventId, userId, onResponseSaved }) 
               </TouchableOpacity>
             </View>
           )}
-          {responseFiles.map((file, index) => (
-            <View
-              key={index}
-              style={[
-                tw`flex-row items-center p-2 m-1 border rounded-full`,
-                { borderColor: '#000' },
-              ]}
-            >
-              <Icon
-                name="document-outline"
-                size={24}
-                color="red"
-                style={tw`mr-2`}
-              />
-              <Text style={tw`text-black flex-1`} numberOfLines={1} ellipsizeMode="tail">
-                {file.name.length > 10
-                  ? `${file.name.substring(0, 10)}...`
-                  : file.name}
-              </Text>
-              <TouchableOpacity onPress={() => removeFile(index)} style={tw`ml-2`}>
-                <Icon name="close" size={16} color="black" />
-              </TouchableOpacity>
-            </View>
-          ))}
+          <View style={tw`flex-row flex-wrap mb-2`}>
+            {responseFiles.map((file, index) => (
+              <View
+                key={index}
+                style={[
+                  tw`flex-row items-center border rounded-full mb-2 mr-2`,
+                  { borderColor: '#000', paddingVertical: 2, paddingHorizontal: 8, width: '45%' },
+                ]}
+              >
+                <Icon
+                  name="document-outline"
+                  size={20}
+                  color="red"
+                  style={tw`mr-2`}
+                />
+                <Text style={tw`text-black flex-1 text-xs`} numberOfLines={1} ellipsizeMode="tail">
+                  {file.name.length > 6
+                    ? `${file.name.substring(0, 6)}...`
+                    : file.name}
+                </Text>
+                <TouchableOpacity onPress={() => removeFile(index)} style={tw`ml-2`}>
+                  <Icon name="close" size={16} color="black" />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
           <TextInput
-            style={tw`border border-gray-300 rounded-lg p-3 mb-5 h-32 mt-5`}
+            style={tw`border border-gray-300 rounded-lg p-3 mb-5 h-32`}
             placeholder="Deskripsikan respon..."
             multiline
             value={responseText}
             onChangeText={setResponseText}
+            textAlignVertical="top"
           />
-          <View style={tw`flex-row justify-between`}>
-            <TouchableOpacity style={tw`bg-gray-400 p-3 rounded-lg flex-1 mr-2`} onPress={onClose}>
+          <View style={tw`flex-row justify-end`}>
+            <TouchableOpacity style={tw`bg-gray-400 p-3 rounded-lg  mr-2`} onPress={onClose}>
               <Text style={tw`text-white text-center`}>Batal</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={tw`bg-blue-600 p-3 rounded-lg flex-1 ml-2`} onPress={handleSend} disabled={saving}>
+            <TouchableOpacity style={tw`bg-blue-600 p-3 rounded-lg`} onPress={handleSend} disabled={saving}>
               {saving ? <ActivityIndicator size="small" color="#fff" /> : <Text style={tw`text-white text-center`}>Kirim</Text>}
             </TouchableOpacity>
           </View>

@@ -50,37 +50,71 @@ const EditProfileScreen = () => {
     }
   };
 
+  const uploadProfileImage = async () => {
+    if (profileImage && !profileImage.uri.startsWith('http')) { // Only upload if a new image was selected
+      const asyncEmail = await AsyncStorage.getItem('email');
+      const formData = new FormData();
+      formData.append('profileImage', {
+        uri: profileImage.uri,
+        type: profileImage.type || 'image/jpeg',
+        name: profileImage.fileName || 'profile.jpg',
+      });
+      formData.append('email', asyncEmail); // Include email in the form data
+
+      try {
+        const response = await axios.put(`${config.apiBaseUrl}/user/profile/image`, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+        return response.data.profileImageUrl; // Assuming the API returns the updated profile image URL
+      } catch (error) {
+        console.error('Error uploading profile image:', error);
+        throw new Error('Gagal mengunggah foto profil');
+      }
+    }
+    return null;
+  };
+
   const handleSavePress = async () => {
     if (newPassword && newPassword !== confirmPassword) {
-      setModalTitle('Gagal');
-      setModalMessage('Kata sandi baru dan kata sandi konfirmasi tidak sama!');
-      setModalVisible(true);
-      return;
+        setModalTitle('Gagal');
+        setModalMessage('Kata sandi baru dan kata sandi konfirmasi tidak sama!');
+        setModalVisible(true);
+        return;
     }
     try {
-      await axios.put(`${config.apiBaseUrl}/user/profile`, {
-        username,
-        email,
-        description: profileDescription,
-      });
-      if (newPassword) {
+        await uploadProfileImage();
         const asyncEmail = await AsyncStorage.getItem('email');
-        await axios.put(`${config.apiBaseUrl}/user/password`, {
-          email: asyncEmail,
-          newPassword,
-          confirmPassword,
+        
+        // Send both the old email and new email along with other profile data to the server
+        await axios.put(`${config.apiBaseUrl}/user/profile`, {
+            username,
+            email: asyncEmail, // Old email
+            newEmail: email, // New email
+            description: profileDescription,
         });
-        await AsyncStorage.setItem('password', newPassword);
-      }
 
-      setModalTitle('Berhasil');
-      setModalMessage('Profil berhasil diubah');
-      setModalVisible(true);
+        // Update the email in AsyncStorage if the profile update was successful
+        await AsyncStorage.setItem('email', email);
+
+        if (newPassword) {
+            await axios.put(`${config.apiBaseUrl}/user/password`, {
+                email: email, // Use the new email here as well
+                newPassword,
+                confirmPassword,
+            });
+            await AsyncStorage.setItem('password', newPassword);
+        }
+
+        setModalTitle('Berhasil');
+        setModalMessage('Profil berhasil diubah');
+        setModalVisible(true);
     } catch (error) {
-      console.error('Error updating profile:', error);
-      setModalTitle('Gagal');
-      setModalMessage(error);
-      setModalVisible(true);
+        console.error('Error updating profile:', error);
+        setModalTitle('Gagal');
+        setModalMessage(error.response?.data?.message || error.message || 'Terjadi kesalahan');
+        setModalVisible(true);
     }
   };
 
@@ -102,7 +136,7 @@ const EditProfileScreen = () => {
       includeBase64: false,
     };
 
-    launchImageLibrary(options, async (response) => {
+    launchImageLibrary(options, (response) => {
       if (response.didCancel) {
         console.log('User cancelled image picker');
       } else if (response.error) {
@@ -110,33 +144,6 @@ const EditProfileScreen = () => {
       } else {
         const source = { uri: response.assets[0].uri };
         setProfileImage(source);
-
-        const asyncEmail = await AsyncStorage.getItem('email');
-
-        if (!asyncEmail) {
-          console.error('Error: Email not found in AsyncStorage');
-          return;
-        }
-
-        // Upload image to the server
-        const formData = new FormData();
-        formData.append('profileImage', {
-          uri: response.assets[0].uri,
-          type: response.assets[0].type,
-          name: response.assets[0].fileName,
-        });
-        formData.append('email', asyncEmail); // Include email in the form data
-
-        try {
-          await axios.put(`${config.apiBaseUrl}/user/profile/image`, formData, {
-            headers: {
-              'Content-Type': 'multipart/form-data',
-            },
-          });
-          console.log('Profile image uploaded successfully');
-        } catch (error) {
-          console.error('Error uploading profile image:', error);
-        }
       }
     });
   };
@@ -201,6 +208,7 @@ const EditProfileScreen = () => {
               secureTextEntry={!isPasswordVisible}
               value={password}
               onChangeText={setPassword}
+              editable={false}
               placeholder="masukan kata sandi saat ini..."
             />
             <TouchableOpacity onPress={togglePasswordVisibility}>
